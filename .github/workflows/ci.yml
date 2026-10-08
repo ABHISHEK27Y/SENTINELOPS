@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   verify:
-    name: Typecheck + Test
+    name: Verify (Typecheck + Lint + Format + Test)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -24,8 +24,14 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Typecheck
         run: npm run typecheck
-      - name: Unit tests
-        run: npm test
+      - name: Lint
+        run: npm run lint
+      - name: Format check
+        run: npm run format:check
+      - name: Knip (dead code / unused deps check)
+        run: npx knip
+      - name: Unit tests with coverage
+        run: npm run test:coverage
 
   docker-build:
     name: Build image
@@ -53,6 +59,17 @@ jobs:
           format: table
           exit-code: '0' # report only; set to '1' to fail the build on findings
           severity: HIGH,CRITICAL
+      - name: Generate SBOM (Syft)
+        uses: anchore/sbom-action@v0
+        with:
+          image: sentinelops/app:${{ github.sha }}
+          format: spdx-json
+          output-file: sbom.spdx.json
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom.spdx.json
       # Push is gated on a configured registry. Uncomment + add secrets to enable.
       # - name: Login to GHCR
       #   uses: docker/login-action@v3

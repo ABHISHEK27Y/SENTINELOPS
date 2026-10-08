@@ -21,7 +21,8 @@
   "include": [
     "packages/*/src/**/*.ts",
     "services/*/src/**/*.ts",
-    "apps/api/src/**/*.ts"
+    "apps/api/src/**/*.ts",
+    "apps/web/**/*.ts"
   ],
   "exclude": ["**/node_modules", "**/dist", "**/*.test.ts"]
 }
