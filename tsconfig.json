@@ -1,0 +1,27 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@sentinelops/shared-types": ["packages/shared-types/src/index.ts"],
+      "@sentinelops/logger": ["packages/logger/src/index.ts"],
+      "@sentinelops/config": ["packages/config/src/index.ts"],
+      "@sentinelops/service-kit": ["packages/service-kit/src/index.ts"],
+      "@sentinelops/kafka": ["packages/kafka/src/index.ts"],
+      "@sentinelops/db": ["packages/db/src/index.ts"],
+      "@sentinelops/detection": ["packages/detection/src/index.ts"],
+      "@sentinelops/correlation": ["packages/correlation/src/index.ts"],
+      "@sentinelops/root-cause": ["packages/root-cause/src/index.ts"],
+      "@sentinelops/rag": ["packages/rag/src/index.ts"],
+      "@sentinelops/remediation": ["packages/remediation/src/index.ts"],
+      "@sentinelops/ai": ["packages/ai/src/index.ts"]
+    }
+  },
+  "include": [
+    "packages/*/src/**/*.ts",
+    "services/*/src/**/*.ts",
+    "apps/api/src/**/*.ts"
+  ],
+  "exclude": ["**/node_modules", "**/dist", "**/*.test.ts"]
+}

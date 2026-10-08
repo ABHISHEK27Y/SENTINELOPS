@@ -1,0 +1,14 @@
+{
+  "name": "@sentinelops/api-gateway",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@sentinelops/service-kit": "*",
+    "@sentinelops/shared-types": "*"
+  }
+}

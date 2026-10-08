@@ -1,0 +1,14 @@
+**/node_modules
+**/dist
+**/.next
+**/*.tsbuildinfo
+.git
+.env
+**/*.log
+docs
+!docs/runbooks
+!docs/runbooks/**
+infrastructure/terraform
+infrastructure/kubernetes
+data
+pgdata

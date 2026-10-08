@@ -1,0 +1,21 @@
+{
+  "name": "@sentinelops/db",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "types": "./src/index.ts",
+  "bin": {
+    "sentinel-migrate": "./src/cli.ts"
+  },
+  "dependencies": {
+    "@sentinelops/config": "*",
+    "@sentinelops/logger": "*",
+    "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.11.10"
+  }
+}

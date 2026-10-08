@@ -1,0 +1,17 @@
+{
+  "name": "@sentinelops/kafka",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "types": "./src/index.ts",
+  "dependencies": {
+    "@sentinelops/config": "*",
+    "@sentinelops/logger": "*",
+    "@sentinelops/shared-types": "*",
+    "ioredis": "^5.4.1",
+    "kafkajs": "^2.2.4"
+  }
+}

@@ -1,0 +1,12 @@
+# Copy to terraform.tfvars and adjust. Never commit real secrets.
+region             = "us-east-1"
+environment        = "staging"
+cluster_name       = "sentinelops"
+kubernetes_version = "1.30"
+node_instance_type = "t3.large"
+node_desired_size  = 3
+db_instance_class  = "db.t3.medium"
+redis_node_type    = "cache.t3.small"
+kafka_instance_type = "kafka.t3.small"
+# Supply the DB password out-of-band, e.g. export TF_VAR_db_password=...
+# db_password = "..."

@@ -1,0 +1,45 @@
+{
+  "name": "sentinelops",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI-Powered Distributed Observability & Autonomous Incident Response Platform",
+  "author": "Abhishek Yadav",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "workspaces": [
+    "packages/*",
+    "services/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --pretty",
+    "lint": "eslint . --ext .ts,.tsx",
+    "test": "vitest run",
+    "infra:up": "docker compose -f infrastructure/docker/docker-compose.infra.yml up -d",
+    "infra:down": "docker compose -f infrastructure/docker/docker-compose.infra.yml down",
+    "stack:up": "docker compose up -d --build",
+    "stack:down": "docker compose down",
+    "db:migrate": "node --import tsx packages/db/src/cli.ts up",
+    "db:status": "node --import tsx packages/db/src/cli.ts status",
+    "dev:payment": "npm run dev -w @sentinelops/payment-service",
+    "dev:order": "npm run dev -w @sentinelops/order-service",
+    "dev:gateway": "npm run dev -w @sentinelops/api-gateway"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@types/node": "^22.10.0",
+    "eslint": "^9.39.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.71.0",
+    "vitest": "~2.1.9"
+  },
+  "overrides": {
+    "@opentelemetry/sdk-metrics": "1.27.0",
+    "@opentelemetry/resources": "1.27.0",
+    "@opentelemetry/sdk-trace-base": "1.27.0",
+    "@opentelemetry/api": "1.9.0"
+  }
+}

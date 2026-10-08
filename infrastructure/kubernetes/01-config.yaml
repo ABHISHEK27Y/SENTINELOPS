@@ -1,0 +1,32 @@
+# Shared configuration + secrets for all SentinelOps pods.
+# In production, source the Secret from an external manager (AWS Secrets Manager /
+# External Secrets Operator) rather than committing it.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sentinelops-config
+  namespace: sentinelops
+data:
+  NODE_ENV: "production"
+  LOG_LEVEL: "info"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
+  OTEL_SERVICE_NAMESPACE: "sentinelops"
+  KAFKA_BROKERS: "kafka:9092"
+  KAFKA_TELEMETRY: "on"
+  PROMETHEUS_URL: "http://prometheus:9090"
+  LLM_PROVIDER: "mock"
+  EMBEDDINGS_PROVIDER: "mock"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sentinelops-secrets
+  namespace: sentinelops
+type: Opaque
+stringData:
+  DATABASE_URL: "postgresql://sentinel:sentinel_dev_pw@postgres:5432/sentinelops"
+  REDIS_URL: "redis://redis:6379"
+  JWT_SECRET: "change_me_in_production"
+  POSTGRES_USER: "sentinel"
+  POSTGRES_PASSWORD: "sentinel_dev_pw"
+  POSTGRES_DB: "sentinelops"

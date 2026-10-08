@@ -1,0 +1,19 @@
+{
+  "name": "@sentinelops/ingestor",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@sentinelops/config": "*",
+    "@sentinelops/db": "*",
+    "@sentinelops/kafka": "*",
+    "@sentinelops/logger": "*",
+    "@sentinelops/service-kit": "*",
+    "@sentinelops/shared-types": "*",
+    "prom-client": "^15.1.3"
+  }
+}
