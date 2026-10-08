@@ -8,15 +8,22 @@
   "engines": {
     "node": ">=20"
   },
+  "packageManager": "npm@10.8.2",
   "workspaces": [
     "packages/*",
     "services/*",
     "apps/*"
   ],
   "scripts": {
+    "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --pretty",
     "lint": "eslint . --ext .ts,.tsx",
-    "test": "vitest run",
+    "lint:fix": "eslint . --ext .ts,.tsx --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run --coverage",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage --coverage.threshold.lines=80 --coverage.threshold.branches=70 --coverage.threshold.functions=80 --coverage.threshold.statements=80",
     "infra:up": "docker compose -f infrastructure/docker/docker-compose.infra.yml up -d",
     "infra:down": "docker compose -f infrastructure/docker/docker-compose.infra.yml down",
     "stack:up": "docker compose up -d --build",
@@ -31,6 +38,9 @@
     "@eslint/js": "^9.39.5",
     "@types/node": "^22.10.0",
     "eslint": "^9.39.5",
+    "eslint-plugin-import": "^2.31.0",
+    "knip": "^5.32.0",
+    "prettier": "^3.3.3",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
     "typescript-eslint": "^8.71.0",
