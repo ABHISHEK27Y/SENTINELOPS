@@ -4,8 +4,8 @@
  * actually transporting data and is invaluable for debugging the control plane.
  */
 import { EventConsumer } from '@sentinelops/kafka';
-import { Topics } from '@sentinelops/shared-types';
 import { createLogger } from '@sentinelops/logger';
+import { Topics } from '@sentinelops/shared-types';
 
 const log = createLogger({ service: 'event-tap' });
 
@@ -42,7 +42,7 @@ async function main(): Promise<void> {
   }, 5000).unref();
 }
 
-main().catch((err) => {
+main().catch(err => {
   log.error({ err: (err as Error).message }, 'event-tap failed');
   process.exit(1);
 });

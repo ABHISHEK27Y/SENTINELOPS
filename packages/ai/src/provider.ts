@@ -21,7 +21,7 @@ export interface LlmProvider {
 export class MockProvider implements LlmProvider {
   readonly name = 'mock';
   async complete(messages: LlmMessage[]): Promise<string> {
-    const user = messages.find((m) => m.role === 'user')?.content ?? '';
+    const user = messages.find(m => m.role === 'user')?.content ?? '';
     const ctx = /<summary>([\s\S]*?)<\/summary>/.exec(user)?.[1]?.trim();
     return ctx ?? 'No summary context provided.';
   }
@@ -30,10 +30,16 @@ export class MockProvider implements LlmProvider {
 /** Anthropic Messages API provider (used when ANTHROPIC_API_KEY is set). */
 export class AnthropicProvider implements LlmProvider {
   readonly name = 'anthropic';
-  constructor(private apiKey: string, private model: string) {}
+  constructor(
+    private apiKey: string,
+    private model: string
+  ) {}
   async complete(messages: LlmMessage[]): Promise<string> {
-    const system = messages.find((m) => m.role === 'system')?.content;
-    const user = messages.filter((m) => m.role === 'user').map((m) => m.content).join('\n');
+    const system = messages.find(m => m.role === 'system')?.content;
+    const user = messages
+      .filter(m => m.role === 'user')
+      .map(m => m.content)
+      .join('\n');
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -50,14 +56,18 @@ export class AnthropicProvider implements LlmProvider {
     });
     if (!res.ok) throw new Error(`anthropic ${res.status}`);
     const data = (await res.json()) as { content?: Array<{ text?: string }> };
-    return data.content?.map((c) => c.text ?? '').join('') ?? '';
+    return data.content?.map(c => c.text ?? '').join('') ?? '';
   }
 }
 
 /** OpenAI-compatible chat completions provider (OPENAI_API_KEY + OPENAI_BASE_URL). */
 export class OpenAiCompatibleProvider implements LlmProvider {
   readonly name = 'openai-compatible';
-  constructor(private apiKey: string, private baseUrl: string, private model: string) {}
+  constructor(
+    private apiKey: string,
+    private baseUrl: string,
+    private model: string
+  ) {}
   async complete(messages: LlmMessage[]): Promise<string> {
     const res = await fetch(`${this.baseUrl.replace(/\/$/, '')}/chat/completions`, {
       method: 'POST',

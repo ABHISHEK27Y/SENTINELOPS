@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
+
+import { MockExecutor } from './executor.js';
 import { recommendActions } from './recommend.js';
 import { evaluateRecovery, RecoveryTracker } from './recovery.js';
-import { MockExecutor } from './executor.js';
 
 describe('recommendActions', () => {
   it('recommends pool increase + restart for a DB pool incident', () => {
@@ -15,7 +16,7 @@ describe('recommendActions', () => {
     expect(actions[0]!.requiresApproval).toBe(false);
     // Targets a real client service, not the postgres infra node.
     expect(actions[0]!.targetService).toBe('payment-service');
-    expect(actions.some((a) => a.type === 'restart_service' && a.requiresApproval)).toBe(true);
+    expect(actions.some(a => a.type === 'restart_service' && a.requiresApproval)).toBe(true);
   });
 
   it('adds a rollback when a recent deployment correlates', () => {
@@ -25,7 +26,7 @@ describe('recommendActions', () => {
       metrics: ['db_query_latency_ms'],
       hasRecentDeployment: true,
     });
-    expect(actions.some((a) => a.type === 'rollback_deployment')).toBe(true);
+    expect(actions.some(a => a.type === 'rollback_deployment')).toBe(true);
   });
 
   it('recommends cache actions for a redis incident', () => {
@@ -34,7 +35,7 @@ describe('recommendActions', () => {
       affectedServices: ['redis', 'notification-service'],
       metrics: ['redis_latency_ms', 'queue_depth'],
     });
-    expect(actions.some((a) => a.type === 'clear_cache')).toBe(true);
+    expect(actions.some(a => a.type === 'clear_cache')).toBe(true);
   });
 });
 
@@ -48,9 +49,7 @@ describe('recovery', () => {
   });
 
   it('fails when a metric is still far above baseline', () => {
-    const r = evaluateRecovery([
-      { metric: 'request_latency_ms', observed: 2600, baseline: 180 },
-    ]);
+    const r = evaluateRecovery([{ metric: 'request_latency_ms', observed: 2600, baseline: 180 }]);
     expect(r.recovered).toBe(false);
   });
 
@@ -67,8 +66,11 @@ describe('recovery', () => {
 describe('MockExecutor', () => {
   it('reports success', async () => {
     const r = await new MockExecutor().execute({
-      type: 'restart_service', targetService: 'payment-service',
-      risk: 'MEDIUM', rationale: 'x', requiresApproval: true,
+      type: 'restart_service',
+      targetService: 'payment-service',
+      risk: 'MEDIUM',
+      rationale: 'x',
+      requiresApproval: true,
     });
     expect(r.ok).toBe(true);
   });

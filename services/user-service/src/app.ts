@@ -9,7 +9,7 @@ export function buildUserService(): ServiceContext {
   const svc = createService({ serviceName: 'user-service', dbBaselineMs: 12 });
   const { app, simulateDbQuery } = svc;
 
-  app.get<{ Params: { id: string } }>('/users/:id', async (req) => {
+  app.get<{ Params: { id: string } }>('/users/:id', async req => {
     const latency = await simulateDbQuery();
     return {
       id: req.params.id,
@@ -19,17 +19,14 @@ export function buildUserService(): ServiceContext {
     };
   });
 
-  app.post<{ Body: { name?: string; email?: string } }>(
-    '/users',
-    async (req, reply) => {
-      await simulateDbQuery(20);
-      return reply.code(201).send({
-        id: crypto.randomUUID(),
-        name: req.body?.name ?? 'anonymous',
-        email: req.body?.email ?? 'anonymous@example.com',
-      });
-    },
-  );
+  app.post<{ Body: { name?: string; email?: string } }>('/users', async (req, reply) => {
+    await simulateDbQuery(20);
+    return reply.code(201).send({
+      id: crypto.randomUUID(),
+      name: req.body?.name ?? 'anonymous',
+      email: req.body?.email ?? 'anonymous@example.com',
+    });
+  });
 
   return svc;
 }

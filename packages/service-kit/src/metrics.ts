@@ -3,13 +3,7 @@
  * always-available metrics path (independent of the OTel collector), scraped at
  * GET /metrics.
  */
-import {
-  Registry,
-  collectDefaultMetrics,
-  Counter,
-  Gauge,
-  Histogram,
-} from 'prom-client';
+import { Registry, collectDefaultMetrics, Counter, Gauge, Histogram } from 'prom-client';
 
 export interface ServiceMetrics {
   registry: Registry;

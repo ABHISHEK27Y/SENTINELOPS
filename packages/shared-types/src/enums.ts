@@ -146,8 +146,7 @@ export const RemediationStatus = {
   EXECUTED: 'EXECUTED',
   FAILED: 'FAILED',
 } as const;
-export type RemediationStatus =
-  (typeof RemediationStatus)[keyof typeof RemediationStatus];
+export type RemediationStatus = (typeof RemediationStatus)[keyof typeof RemediationStatus];
 
 /** Fault types the demo services can inject on themselves. */
 export const FaultType = {

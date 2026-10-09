@@ -18,7 +18,7 @@ spec:
             - secretRef: { name: sentinelops-secrets }
           ports: [{ containerPort: 5432 }]
           readinessProbe:
-            exec: { command: ["pg_isready", "-U", "sentinel", "-d", "sentinelops"] }
+            exec: { command: ['pg_isready', '-U', 'sentinel', '-d', 'sentinelops'] }
             initialDelaySeconds: 5
             periodSeconds: 5
           volumeMounts:
@@ -48,10 +48,10 @@ spec:
       containers:
         - name: redis
           image: redis:7-alpine
-          args: ["redis-server", "--appendonly", "yes"]
+          args: ['redis-server', '--appendonly', 'yes']
           ports: [{ containerPort: 6379 }]
           readinessProbe:
-            exec: { command: ["redis-cli", "ping"] }
+            exec: { command: ['redis-cli', 'ping'] }
             initialDelaySeconds: 3
             periodSeconds: 5
 ---

@@ -73,7 +73,7 @@ export class FaultController {
 
   list(): Array<{ type: FaultTypeT; params: FaultParams; since: number }> {
     return [...this.active.values()]
-      .filter((f) => this.get(f.type))
+      .filter(f => this.get(f.type))
       .map(({ type, params, since }) => ({ type, params, since }));
   }
 
@@ -107,7 +107,7 @@ export class FaultController {
   trafficSpikeFactor(): number {
     const f = this.get(FaultType.TRAFFIC_SPIKE);
     if (!f) return 1;
-    return typeof f.params.factor === 'number' ? f.params.factor : 4;
+    return typeof f.params['factor'] === 'number' ? f.params['factor'] : 4;
   }
 
   kafkaLagMs(): number {

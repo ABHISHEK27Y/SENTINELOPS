@@ -33,7 +33,7 @@ export function buildNotificationService(): ServiceContext {
         channel: req.body?.channel ?? 'email',
         pending,
       });
-    },
+    }
   );
 
   // Background worker drains the queue (~20 notifications/sec when Redis is up).

@@ -8,9 +8,9 @@
  *   TARGET_RPS    approximate requests/sec (default 8)
  *   ORDER_RATIO   fraction of requests that are POST /orders (default 0.6)
  */
-const GATEWAY_URL = process.env.GATEWAY_URL ?? 'http://localhost:8080';
-const TARGET_RPS = Number(process.env.TARGET_RPS ?? 8);
-const ORDER_RATIO = Number(process.env.ORDER_RATIO ?? 0.6);
+const GATEWAY_URL = process.env['GATEWAY_URL'] ?? 'http://localhost:8080';
+const TARGET_RPS = Number(process.env['TARGET_RPS'] ?? 8);
+const ORDER_RATIO = Number(process.env['ORDER_RATIO'] ?? 0.6);
 
 const intervalMs = Math.max(10, Math.floor(1000 / TARGET_RPS));
 
@@ -41,8 +41,7 @@ async function hit(): Promise<void> {
 }
 
 console.log(
-  `[loadgen] targeting ${GATEWAY_URL} at ~${TARGET_RPS} rps ` +
-    `(order ratio ${ORDER_RATIO})`,
+  `[loadgen] targeting ${GATEWAY_URL} at ~${TARGET_RPS} rps ` + `(order ratio ${ORDER_RATIO})`
 );
 
 const ticker = setInterval(() => void hit(), intervalMs);
@@ -51,7 +50,7 @@ const ticker = setInterval(() => void hit(), intervalMs);
 setInterval(() => {
   console.log(
     `[loadgen] sent=${sent} ok=${ok} failed=${failed} ` +
-      `(${((failed / Math.max(1, sent)) * 100).toFixed(1)}% err)`,
+      `(${((failed / Math.max(1, sent)) * 100).toFixed(1)}% err)`
   );
 }, 10_000);
 

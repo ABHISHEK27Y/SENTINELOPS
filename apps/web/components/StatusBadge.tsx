@@ -43,7 +43,15 @@ export function StatusBadge({ status }: { status: string }) {
   return <span className={`badge ${STATUS[status] ?? 'border-muted text-muted'}`}>{status}</span>;
 }
 
-export function Card({ title, children, right }: { title?: string; children: ReactNode; right?: ReactNode }) {
+export function Card({
+  title,
+  children,
+  right,
+}: {
+  title?: string;
+  children: ReactNode;
+  right?: ReactNode;
+}) {
   return (
     <div className="card">
       {(title || right) && (

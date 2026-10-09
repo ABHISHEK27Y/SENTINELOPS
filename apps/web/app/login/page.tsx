@@ -6,7 +6,7 @@ import { useAuth } from '@/lib/store';
 
 export default function LoginPage() {
   const router = useRouter();
-  const setAuth = useAuth((s) => s.setAuth);
+  const setAuth = useAuth(s => s.setAuth);
   const [email, setEmail] = useState('engineer@sentinelops.dev');
   const [password, setPassword] = useState('engineer123');
   const [error, setError] = useState('');
@@ -36,13 +36,20 @@ export default function LoginPage() {
         </div>
         <div>
           <label className="label">Email</label>
-          <input className="w-full mt-1 bg-panel2 border border-border rounded px-3 py-2 text-sm"
-            value={email} onChange={(e) => setEmail(e.target.value)} />
+          <input
+            className="w-full mt-1 bg-panel2 border border-border rounded px-3 py-2 text-sm"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+          />
         </div>
         <div>
           <label className="label">Password</label>
-          <input type="password" className="w-full mt-1 bg-panel2 border border-border rounded px-3 py-2 text-sm"
-            value={password} onChange={(e) => setPassword(e.target.value)} />
+          <input
+            type="password"
+            className="w-full mt-1 bg-panel2 border border-border rounded px-3 py-2 text-sm"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+          />
         </div>
         {error && <div className="text-critical text-sm">{error}</div>}
         <button className="btn btn-primary w-full" disabled={busy}>

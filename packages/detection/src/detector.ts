@@ -1,4 +1,5 @@
 import { Severity, type Anomaly, type Severity as SeverityT } from '@sentinelops/shared-types';
+
 import { RollingWindow } from './stats.js';
 
 /** One telemetry sample fed to the detector. */
@@ -87,17 +88,12 @@ export class AnomalyDetector {
     win.push(sample.value);
 
     const directional =
-      this.cfg.direction === 'both'
-        ? Math.abs(z)
-        : this.cfg.direction === 'up'
-          ? z
-          : -z;
+      this.cfg.direction === 'both' ? Math.abs(z) : this.cfg.direction === 'up' ? z : -z;
 
     if (directional < this.cfg.zThreshold) return null;
 
     const score = clamp01(
-      (directional - this.cfg.zThreshold) /
-        (this.cfg.zSaturation - this.cfg.zThreshold),
+      (directional - this.cfg.zThreshold) / (this.cfg.zSaturation - this.cfg.zThreshold)
     );
 
     return {

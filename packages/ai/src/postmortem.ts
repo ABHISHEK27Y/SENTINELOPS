@@ -5,14 +5,14 @@ export interface PostmortemContext {
   title: string;
   severity: string;
   startedAt: string;
-  resolvedAt?: string;
+  resolvedAt?: string | null;
   affectedServices: string[];
   investigation: Investigation;
   remediation: Array<{ action: string; approvedBy?: string; result?: string }>;
   timeline: Array<{ at: string; message: string }>;
 }
 
-function durationStr(startIso: string, endIso?: string): string {
+function durationStr(startIso: string, endIso?: string | null): string {
   if (!endIso) return 'ongoing';
   const ms = Date.parse(endIso) - Date.parse(startIso);
   const mins = Math.max(0, Math.round(ms / 60000));
@@ -38,9 +38,7 @@ export function buildPostmortem(ctx: PostmortemContext): string {
   lines.push(inv.summary);
   lines.push('');
   lines.push('## Impact');
-  lines.push(
-    `${ctx.affectedServices.length} service(s) degraded starting ${ctx.startedAt}.`,
-  );
+  lines.push(`${ctx.affectedServices.length} service(s) degraded starting ${ctx.startedAt}.`);
   lines.push('');
   lines.push('## Timeline');
   for (const t of ctx.timeline) lines.push(`- \`${t.at}\` ${t.message}`);
@@ -53,9 +51,7 @@ export function buildPostmortem(ctx: PostmortemContext): string {
   for (const alt of inv.alternativeHypotheses) lines.push(`- Considered: ${alt}`);
   lines.push('');
   lines.push('## Detection');
-  lines.push(
-    `Detected automatically by SentinelOps from anomaly correlation. Evidence:`,
-  );
+  lines.push(`Detected automatically by SentinelOps from anomaly correlation. Evidence:`);
   for (const e of inv.evidence.slice(0, 6)) lines.push(`- ${e}`);
   lines.push('');
   lines.push('## Remediation');
@@ -63,7 +59,7 @@ export function buildPostmortem(ctx: PostmortemContext): string {
   for (const r of ctx.remediation) {
     lines.push(
       `- ${r.action}${r.approvedBy ? ` (approved by ${r.approvedBy})` : ''}` +
-        `${r.result ? ` — ${r.result}` : ''}`,
+        `${r.result ? ` — ${r.result}` : ''}`
     );
   }
   lines.push('');

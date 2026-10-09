@@ -1,6 +1,6 @@
 import { startTelemetry, stopTelemetry } from '@sentinelops/service-kit/telemetry';
 
-const PORT = Number(process.env.PAYMENT_SERVICE_PORT ?? 8083);
+const PORT = Number(process.env['PAYMENT_SERVICE_PORT'] ?? 8083);
 
 // Start OTel BEFORE importing the app so http/fastify get auto-instrumented.
 await startTelemetry('payment-service');

@@ -5,18 +5,12 @@ import {
 } from '@sentinelops/shared-types';
 
 /** Guard for the incident lifecycle state machine (see ARCHITECTURE §7). */
-export function canTransition(
-  from: IncidentStatusT,
-  to: IncidentStatusT,
-): boolean {
+export function canTransition(from: IncidentStatusT, to: IncidentStatusT): boolean {
   return INCIDENT_TRANSITIONS[from].includes(to);
 }
 
 /** Throws if the transition is illegal; returns the new status otherwise. */
-export function transition(
-  from: IncidentStatusT,
-  to: IncidentStatusT,
-): IncidentStatusT {
+export function transition(from: IncidentStatusT, to: IncidentStatusT): IncidentStatusT {
   if (!canTransition(from, to)) {
     throw new Error(`illegal incident transition: ${from} → ${to}`);
   }

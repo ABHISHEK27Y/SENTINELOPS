@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { rankRootCauses, type DirectedEdge } from './engine.js';
+
 import type { Anomaly } from '@sentinelops/shared-types';
+
+import { rankRootCauses, type DirectedEdge } from './engine.js';
 
 const edges: DirectedEdge[] = [
   { from: 'api-gateway', to: 'order-service' },
@@ -42,7 +44,7 @@ describe('rankRootCauses', () => {
     expect(hyps[0]!.title).toContain('postgres');
     expect(hyps[0]!.confidence).toBeGreaterThan(hyps[1]!.confidence);
     // postgres has 2 dependents (payment, order) in the incident.
-    const depEvidence = hyps[0]!.evidence.find((e) => e.kind === 'dependency');
+    const depEvidence = hyps[0]!.evidence.find(e => e.kind === 'dependency');
     expect(depEvidence?.data.dependents).toBe(2);
   });
 
@@ -55,11 +57,13 @@ describe('rankRootCauses', () => {
         a('order-service', 'error_rate', t0 + 1000),
       ],
       edges,
-      deployments: [{ service: 'payment-service', deployedAt: new Date(t0 - 60_000).toISOString() }],
+      deployments: [
+        { service: 'payment-service', deployedAt: new Date(t0 - 60_000).toISOString() },
+      ],
       incidentStartMs: t0,
     });
-    const payment = withDeploy.find((h) => h.title.includes('payment-service'))!;
-    expect(payment.evidence.some((e) => e.kind === 'deployment')).toBe(true);
+    const payment = withDeploy.find(h => h.title.includes('payment-service'))!;
+    expect(payment.evidence.some(e => e.kind === 'deployment')).toBe(true);
   });
 
   it('never asserts certainty (confidence < 1)', () => {

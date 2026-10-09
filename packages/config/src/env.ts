@@ -6,9 +6,7 @@ import { z } from 'zod';
 loadDotenv();
 
 const EnvSchema = z.object({
-  NODE_ENV: z
-    .enum(['development', 'test', 'production'])
-    .default('development'),
+  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   LOG_LEVEL: z.string().default('info'),
 
   DATABASE_URL: z
@@ -29,9 +27,7 @@ const EnvSchema = z.object({
   JWT_SECRET: z.string().default('change_me_in_production_dev_only_secret'),
   JWT_EXPIRES_IN: z.string().default('1h'),
 
-  LLM_PROVIDER: z
-    .enum(['mock', 'anthropic', 'openai-compatible'])
-    .default('mock'),
+  LLM_PROVIDER: z.enum(['mock', 'anthropic', 'openai-compatible']).default('mock'),
   ANTHROPIC_API_KEY: z.string().optional(),
   OPENAI_API_KEY: z.string().optional(),
   OPENAI_BASE_URL: z.string().optional(),
@@ -49,9 +45,7 @@ export function getEnv(): Env {
   if (cached) return cached;
   const parsed = EnvSchema.safeParse(process.env);
   if (!parsed.success) {
-    const issues = parsed.error.issues
-      .map((i) => `  - ${i.path.join('.')}: ${i.message}`)
-      .join('\n');
+    const issues = parsed.error.issues.map(i => `  - ${i.path.join('.')}: ${i.message}`).join('\n');
     throw new Error(`Invalid environment configuration:\n${issues}`);
   }
   cached = parsed.data;
@@ -71,5 +65,7 @@ export function parseDatabaseUrl(url = getEnv().DATABASE_URL) {
 }
 
 export function kafkaBrokers(env = getEnv()): string[] {
-  return env.KAFKA_BROKERS.split(',').map((s) => s.trim()).filter(Boolean);
+  return env.KAFKA_BROKERS.split(',')
+    .map(s => s.trim())
+    .filter(Boolean);
 }

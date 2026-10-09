@@ -27,7 +27,7 @@ export interface RecoveryOptions {
 /** Evaluate a single window of observations against baselines. */
 export function evaluateRecovery(
   observations: MetricObservation[],
-  opts: RecoveryOptions = {},
+  opts: RecoveryOptions = {}
 ): RecoveryResult {
   const tolerance = opts.tolerance ?? 1.5;
   const checks = observations.map((o): RecoveryCheck => {
@@ -35,7 +35,7 @@ export function evaluateRecovery(
     const threshold = Math.max(o.baseline * tolerance, o.baseline + 1e-9);
     return { ...o, passed: o.observed <= threshold };
   });
-  return { recovered: checks.every((c) => c.passed), checks };
+  return { recovered: checks.every(c => c.passed), checks };
 }
 
 /**
@@ -46,7 +46,7 @@ export class RecoveryTracker {
   private consecutive = 0;
   constructor(
     private requiredWindows = 2,
-    private opts: RecoveryOptions = {},
+    private opts: RecoveryOptions = {}
   ) {}
 
   /** Feed one window; returns whether recovery is confirmed. */

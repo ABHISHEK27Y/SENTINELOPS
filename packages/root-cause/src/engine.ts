@@ -1,8 +1,4 @@
-import type {
-  Anomaly,
-  Evidence,
-  RootCauseHypothesis,
-} from '@sentinelops/shared-types';
+import type { Anomaly, Evidence, RootCauseHypothesis } from '@sentinelops/shared-types';
 
 /** Directed dependency edge: `from` depends on / calls `to`. */
 export interface DirectedEdge {
@@ -74,31 +70,26 @@ export function rankRootCauses(input: RootCauseInput): RootCauseHypothesis[] {
     const list = byService.get(svc) ?? [];
     return list.reduce(
       (min, a) => Math.min(min, Date.parse(a.windowStart)),
-      Number.POSITIVE_INFINITY,
+      Number.POSITIVE_INFINITY
     );
   };
   const globalEarliest = Math.min(...services.map(earliestOf));
 
-  const scored = services.map((c) => {
+  const scored = services.map(c => {
     // How many OTHER affected services depend (transitively) on c?
-    const dependents = services.filter(
-      (s) => s !== c && reachable(s, adj).has(c),
-    ).length;
+    const dependents = services.filter(s => s !== c && reachable(s, adj).has(c)).length;
     const depScore = dependents / Math.max(1, services.length - 1);
 
     const earlyScore = earliestOf(c) === globalEarliest ? 1 : 0;
 
-    const maxSev = (byService.get(c) ?? []).reduce(
-      (m, a) => Math.max(m, a.anomalyScore),
-      0,
-    );
+    const maxSev = (byService.get(c) ?? []).reduce((m, a) => Math.max(m, a.anomalyScore), 0);
 
     const recentDeploy = deployments.find(
-      (d) =>
+      d =>
         d.service === c &&
         incidentStartMs !== undefined &&
         incidentStartMs - Date.parse(d.deployedAt) >= 0 &&
-        incidentStartMs - Date.parse(d.deployedAt) <= DEPLOY_WINDOW_MS,
+        incidentStartMs - Date.parse(d.deployedAt) <= DEPLOY_WINDOW_MS
     );
     const deployScore = recentDeploy ? 1 : 0;
 
@@ -114,7 +105,7 @@ export function rankRootCauses(input: RootCauseInput): RootCauseHypothesis[] {
   scored.sort((a, b) => b.score - a.score);
 
   return scored
-    .filter((s) => (byService.get(s.service)?.length ?? 0) > 0 || s.dependents > 0)
+    .filter(s => (byService.get(s.service)?.length ?? 0) > 0 || s.dependents > 0)
     .map((s): RootCauseHypothesis => {
       const evidence: Evidence[] = [];
       for (const a of byService.get(s.service) ?? []) {

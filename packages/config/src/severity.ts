@@ -61,16 +61,15 @@ const clamp01 = (n: number) => Math.max(0, Math.min(1, n));
 /** Returns both the raw score (0..1) and the bucketed severity. */
 export function computeSeverity(
   signals: SeveritySignals,
-  rules: SeverityRules = DEFAULT_SEVERITY_RULES,
+  rules: SeverityRules = DEFAULT_SEVERITY_RULES
 ): { score: number; severity: SeverityT } {
   const { weights: w, caps: c, thresholds: t } = rules;
   const score = clamp01(
     w.errorRate * clamp01(signals.errorRate / c.errorRate) +
       w.latencyRatio * clamp01(signals.latencyRatio / c.latencyRatio) +
-      w.affectedServices *
-        clamp01(signals.affectedServices / c.affectedServices) +
+      w.affectedServices * clamp01(signals.affectedServices / c.affectedServices) +
       w.requestVolume * clamp01(signals.requestVolume / c.requestVolume) +
-      w.duration * clamp01(signals.durationSeconds / c.durationSeconds),
+      w.duration * clamp01(signals.durationSeconds / c.durationSeconds)
   );
 
   let severity: SeverityT = Severity.INFO;

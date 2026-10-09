@@ -12,7 +12,10 @@ interface Graph {
 
 const TIER_X: Record<string, number> = { edge: 0, application: 260, data: 560, control: 820 };
 const HEALTH_COLOR: Record<string, string> = {
-  HEALTHY: '#3fb950', DEGRADED: '#d29922', UNHEALTHY: '#f85149', UNKNOWN: '#8b95a7',
+  HEALTHY: '#3fb950',
+  DEGRADED: '#d29922',
+  UNHEALTHY: '#f85149',
+  UNKNOWN: '#8b95a7',
 };
 
 export default function ArchitecturePage() {
@@ -21,7 +24,7 @@ export default function ArchitecturePage() {
   const { nodes, edges } = useMemo(() => {
     if (!data) return { nodes: [] as Node[], edges: [] as Edge[] };
     const tierCounts: Record<string, number> = {};
-    const nodes: Node[] = data.nodes.map((n) => {
+    const nodes: Node[] = data.nodes.map(n => {
       const y = (tierCounts[n.tier] = (tierCounts[n.tier] ?? 0) + 1);
       return {
         id: n.id,
@@ -31,12 +34,18 @@ export default function ArchitecturePage() {
           background: '#12161f',
           color: '#e6e9ef',
           border: `2px solid ${HEALTH_COLOR[n.health] ?? '#8b95a7'}`,
-          borderRadius: 8, fontSize: 12, width: 170, padding: 6,
+          borderRadius: 8,
+          fontSize: 12,
+          width: 170,
+          padding: 6,
         },
       };
     });
     const edges: Edge[] = data.edges.map((e, i) => ({
-      id: `e${i}`, source: e.source, target: e.target, animated: true,
+      id: `e${i}`,
+      source: e.source,
+      target: e.target,
+      animated: true,
       style: { stroke: '#232936' },
     }));
     return { nodes, edges };

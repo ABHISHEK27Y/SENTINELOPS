@@ -17,10 +17,9 @@ export const EventEnvelopeSchema = z.object({
   version: z.number().int().default(1),
   payload: z.unknown(),
 });
-export type EventEnvelope<T = unknown> = Omit<
-  z.infer<typeof EventEnvelopeSchema>,
-  'payload'
-> & { payload: T };
+export type EventEnvelope<T = unknown> = Omit<z.infer<typeof EventEnvelopeSchema>, 'payload'> & {
+  payload: T;
+};
 
 export const MetricSampleSchema = z.object({
   metric: z.string(),
@@ -68,14 +67,15 @@ export function makeEnvelope<T>(input: {
   eventId?: string;
   timestamp?: string;
 }): EventEnvelope<T> {
-  return {
+  const envelope: EventEnvelope<T> = {
     eventId: input.eventId ?? crypto.randomUUID(),
     type: input.type,
     timestamp: input.timestamp ?? new Date().toISOString(),
     service: input.service,
-    traceId: input.traceId,
-    correlationId: input.correlationId,
     version: 1,
     payload: input.payload,
   };
+  if (input.traceId !== undefined) envelope.traceId = input.traceId;
+  if (input.correlationId !== undefined) envelope.correlationId = input.correlationId;
+  return envelope;
 }

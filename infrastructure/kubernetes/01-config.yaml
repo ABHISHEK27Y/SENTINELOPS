@@ -44,18 +44,18 @@ metadata:
   name: sentinelops-config
   namespace: sentinelops
 data:
-  NODE_ENV: "production"
-  LOG_LEVEL: "info"
-  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
-  OTEL_SERVICE_NAMESPACE: "sentinelops"
+  NODE_ENV: 'production'
+  LOG_LEVEL: 'info'
+  OTEL_EXPORTER_OTLP_ENDPOINT: 'http://otel-collector:4318'
+  OTEL_SERVICE_NAMESPACE: 'sentinelops'
   # Trace sampling: 10% in production (parentbased_traceidratio)
-  OTEL_TRACES_SAMPLER: "parentbased_traceidratio"
-  OTEL_TRACES_SAMPLER_ARG: "0.1"
-  KAFKA_BROKERS: "kafka:9092"
-  KAFKA_TELEMETRY: "on"
-  PROMETHEUS_URL: "http://prometheus:9090"
-  LLM_PROVIDER: "mock"
-  EMBEDDINGS_PROVIDER: "mock"
+  OTEL_TRACES_SAMPLER: 'parentbased_traceidratio'
+  OTEL_TRACES_SAMPLER_ARG: '0.1'
+  KAFKA_BROKERS: 'kafka:9092'
+  KAFKA_TELEMETRY: 'on'
+  PROMETHEUS_URL: 'http://prometheus:9090'
+  LLM_PROVIDER: 'mock'
+  EMBEDDINGS_PROVIDER: 'mock'
 ---
 apiVersion: v1
 kind: Secret
@@ -65,13 +65,13 @@ metadata:
 type: Opaque
 stringData:
   # ⚠️ PLACEHOLDER VALUES - REPLACE WITH EXTERNAL SECRETS IN PRODUCTION
-  DATABASE_URL: "postgresql://sentinel:CHANGE_ME@postgres:5432/sentinelops"
-  REDIS_URL: "redis://redis:6379"
-  JWT_SECRET: "CHANGE_ME_IN_PRODUCTION_USE_EXTERNAL_SECRETS"
-  POSTGRES_USER: "sentinel"
-  POSTGRES_PASSWORD: "CHANGE_ME"
-  POSTGRES_DB: "sentinelops"
+  DATABASE_URL: 'postgresql://sentinel:CHANGE_ME@postgres:5432/sentinelops'
+  REDIS_URL: 'redis://redis:6379'
+  JWT_SECRET: 'CHANGE_ME_IN_PRODUCTION_USE_EXTERNAL_SECRETS'
+  POSTGRES_USER: 'sentinel'
+  POSTGRES_PASSWORD: 'CHANGE_ME'
+  POSTGRES_DB: 'sentinelops'
   # LLM API keys (optional, for AI features)
-  ANTHROPIC_API_KEY: ""
-  OPENAI_API_KEY: ""
-  OPENAI_BASE_URL: ""
+  ANTHROPIC_API_KEY: ''
+  OPENAI_API_KEY: ''
+  OPENAI_BASE_URL: ''

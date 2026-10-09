@@ -1,6 +1,6 @@
 import { startTelemetry, stopTelemetry } from '@sentinelops/service-kit/telemetry';
 
-const PORT = Number(process.env.API_GATEWAY_PORT ?? 8080);
+const PORT = Number(process.env['API_GATEWAY_PORT'] ?? 8080);
 
 await startTelemetry('api-gateway');
 const { buildApiGateway } = await import('./app.js');

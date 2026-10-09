@@ -1,4 +1,5 @@
 import pg from 'pg';
+
 import { getEnv } from '@sentinelops/config';
 
 const { Pool } = pg;
@@ -27,7 +28,7 @@ export async function closePool(): Promise<void> {
 /** Small helper for one-off queries. */
 export async function query<T extends pg.QueryResultRow = pg.QueryResultRow>(
   text: string,
-  params?: unknown[],
+  params?: unknown[]
 ): Promise<pg.QueryResult<T>> {
   return getPool().query<T>(text, params as never);
 }

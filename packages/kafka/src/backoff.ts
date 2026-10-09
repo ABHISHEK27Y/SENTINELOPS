@@ -19,10 +19,7 @@ export const DEFAULT_BACKOFF: Required<BackoffOptions> = {
 };
 
 /** The upper bound of the delay window for a given attempt (0-indexed). */
-export function backoffCeiling(
-  attempt: number,
-  opts: BackoffOptions = {},
-): number {
+export function backoffCeiling(attempt: number, opts: BackoffOptions = {}): number {
   const { baseMs, capMs } = { ...DEFAULT_BACKOFF, ...opts };
   const exp = baseMs * 2 ** Math.max(0, attempt);
   return Math.min(capMs, exp);
@@ -32,7 +29,7 @@ export function backoffCeiling(
 export function backoffDelay(
   attempt: number,
   opts: BackoffOptions = {},
-  rng: () => number = Math.random,
+  rng: () => number = Math.random
 ): number {
   return Math.floor(rng() * backoffCeiling(attempt, opts));
 }
@@ -42,5 +39,4 @@ export function shouldRetry(attempt: number, opts: BackoffOptions = {}): boolean
   return attempt < maxRetries;
 }
 
-export const sleep = (ms: number): Promise<void> =>
-  new Promise((resolve) => setTimeout(resolve, ms));
+export const sleep = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));

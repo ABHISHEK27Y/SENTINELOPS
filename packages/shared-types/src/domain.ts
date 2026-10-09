@@ -23,14 +23,7 @@ export const ServiceDependencySchema = z.object({
 export type ServiceDependency = z.infer<typeof ServiceDependencySchema>;
 
 export const EvidenceSchema = z.object({
-  kind: z.enum([
-    'metric',
-    'log',
-    'trace',
-    'deployment',
-    'dependency',
-    'anomaly',
-  ]),
+  kind: z.enum(['metric', 'log', 'trace', 'deployment', 'dependency', 'anomaly']),
   summary: z.string(),
   /** Structured backing data so the UI can render + the AI can cite it. */
   data: z.record(z.unknown()).default({}),
@@ -93,14 +86,7 @@ export const RemediationActionSchema = z.object({
   targetService: z.string(),
   params: z.record(z.unknown()).default({}),
   risk: z.enum(['LOW', 'MEDIUM', 'HIGH']),
-  status: z.enum([
-    'PROPOSED',
-    'APPROVED',
-    'REJECTED',
-    'EXECUTING',
-    'EXECUTED',
-    'FAILED',
-  ]),
+  status: z.enum(['PROPOSED', 'APPROVED', 'REJECTED', 'EXECUTING', 'EXECUTED', 'FAILED']),
   rationale: z.string(),
   requiresApproval: z.boolean(),
   proposedAt: z.string().datetime(),

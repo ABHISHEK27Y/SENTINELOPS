@@ -1,4 +1,5 @@
 import { Kafka, logLevel, type KafkaConfig } from 'kafkajs';
+
 import { getEnv, kafkaBrokers } from '@sentinelops/config';
 
 /**

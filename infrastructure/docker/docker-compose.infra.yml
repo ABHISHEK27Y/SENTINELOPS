@@ -12,11 +12,11 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sentinel_dev_pw}
       POSTGRES_DB: ${POSTGRES_DB:-sentinelops}
     ports:
-      - "5432:5432"
+      - '5432:5432'
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sentinel} -d ${POSTGRES_DB:-sentinelops}"]
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-sentinel} -d ${POSTGRES_DB:-sentinelops}']
       interval: 5s
       timeout: 3s
       retries: 20
@@ -24,11 +24,11 @@ services:
   redis:
     image: redis:7-alpine
     container_name: sentinel-redis
-    command: ["redis-server", "--appendonly", "yes"]
+    command: ['redis-server', '--appendonly', 'yes']
     ports:
-      - "6379:6379"
+      - '6379:6379'
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 5s
       timeout: 3s
       retries: 20
@@ -37,7 +37,7 @@ services:
     image: apache/kafka:3.8.0
     container_name: sentinel-kafka
     ports:
-      - "9092:9092"
+      - '9092:9092'
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
@@ -49,10 +49,14 @@ services:
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
       KAFKA_NUM_PARTITIONS: 3
     healthcheck:
-      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 || exit 1"]
+      test:
+        [
+          'CMD-SHELL',
+          '/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 || exit 1',
+        ]
       interval: 10s
       timeout: 5s
       retries: 20
@@ -62,22 +66,22 @@ services:
     image: jaegertracing/all-in-one:1.62.0
     container_name: sentinel-jaeger
     environment:
-      COLLECTOR_OTLP_ENABLED: "true"
+      COLLECTOR_OTLP_ENABLED: 'true'
     ports:
-      - "16686:16686"   # UI
-      - "14268:14268"   # jaeger collector
-      - "14250:14250"
+      - '16686:16686' # UI
+      - '14268:14268' # jaeger collector
+      - '14250:14250'
 
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.111.0
     container_name: sentinel-otel
-    command: ["--config=/etc/otel/config.yaml"]
+    command: ['--config=/etc/otel/config.yaml']
     volumes:
       - ../../monitoring/otel/otel-collector-config.yaml:/etc/otel/config.yaml:ro
     ports:
-      - "4317:4317"     # OTLP gRPC
-      - "4318:4318"     # OTLP HTTP
-      - "8889:8889"     # Prometheus exporter (collector self + forwarded metrics)
+      - '4317:4317' # OTLP gRPC
+      - '4318:4318' # OTLP HTTP
+      - '8889:8889' # Prometheus exporter (collector self + forwarded metrics)
     depends_on:
       - jaeger
       - loki
@@ -86,14 +90,14 @@ services:
     image: prom/prometheus:v2.55.0
     container_name: sentinel-prometheus
     command:
-      - "--config.file=/etc/prometheus/prometheus.yml"
-      - "--storage.tsdb.retention.time=6h"
-      - "--enable-feature=exemplar-storage"
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=6h'
+      - '--enable-feature=exemplar-storage'
     volumes:
       - ../../monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ../../monitoring/prometheus/alerts:/etc/prometheus/alerts:ro
     ports:
-      - "9090:9090"
+      - '9090:9090'
 
   grafana:
     image: grafana/grafana:11.3.0
@@ -101,10 +105,10 @@ services:
     environment:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: admin
-      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ENABLED: 'true'
       GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
     ports:
-      - "3001:3000"
+      - '3001:3000'
     volumes:
       - ../../monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
       - ../../monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
@@ -117,9 +121,9 @@ services:
   loki:
     image: grafana/loki:3.1.0
     container_name: sentinel-loki
-    command: ["-config.file=/etc/loki/local-config.yaml"]
+    command: ['-config.file=/etc/loki/local-config.yaml']
     ports:
-      - "3100:3100"
+      - '3100:3100'
     volumes:
       - ../../monitoring/loki/local-config.yaml:/etc/loki/local-config.yaml:ro
       - loki-data:/loki
@@ -129,7 +133,7 @@ services:
     image: prom/alertmanager:v0.27.0
     container_name: sentinel-alertmanager
     ports:
-      - "9093:9093"
+      - '9093:9093'
     volumes:
       - ../../monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
 

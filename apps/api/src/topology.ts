@@ -12,7 +12,12 @@ export const SERVICES: ServiceInfo[] = [
   { id: 'user-service', displayName: 'User Service', tier: 'application', port: 8081 },
   { id: 'order-service', displayName: 'Order Service', tier: 'application', port: 8082 },
   { id: 'payment-service', displayName: 'Payment Service', tier: 'application', port: 8083 },
-  { id: 'notification-service', displayName: 'Notification Service', tier: 'application', port: 8084 },
+  {
+    id: 'notification-service',
+    displayName: 'Notification Service',
+    tier: 'application',
+    port: 8084,
+  },
   { id: 'postgres', displayName: 'PostgreSQL', tier: 'data', port: 5432 },
   { id: 'redis', displayName: 'Redis', tier: 'data', port: 6379 },
 ];
@@ -28,7 +33,7 @@ export const DEPENDENCIES: DirectedEdge[] = [
   { from: 'payment-service', to: 'redis' },
 ];
 
-const PORT = new Map(SERVICES.map((s) => [s.id, s.port]));
+const PORT = new Map(SERVICES.map(s => [s.id, s.port]));
 
 /** Base URL for a monitored service. Container DNS in prod, localhost in dev. */
 export function serviceBaseUrl(service: string): string {
@@ -40,5 +45,11 @@ export function serviceBaseUrl(service: string): string {
 
 /** Services that expose the fault-injection admin API (data-plane HTTP services). */
 export function canInjectFault(service: string): boolean {
-  return ['api-gateway', 'user-service', 'order-service', 'payment-service', 'notification-service'].includes(service);
+  return [
+    'api-gateway',
+    'user-service',
+    'order-service',
+    'payment-service',
+    'notification-service',
+  ].includes(service);
 }

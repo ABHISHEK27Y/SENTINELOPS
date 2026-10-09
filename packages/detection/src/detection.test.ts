@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { RollingWindow, Ewma } from './stats.js';
+
 import { AnomalyDetector, scoreToSeverity } from './detector.js';
+import { RollingWindow, Ewma } from './stats.js';
 
 describe('RollingWindow', () => {
   it('computes mean and std, and evicts beyond capacity', () => {
     const w = new RollingWindow(3);
-    [2, 4, 6].forEach((v) => w.push(v));
+    [2, 4, 6].forEach(v => w.push(v));
     expect(w.mean()).toBeCloseTo(4);
     expect(w.std()).toBeCloseTo(Math.sqrt((4 + 0 + 4) / 3)); // pop std ≈ 1.633
     w.push(8); // evicts 2 → window [4,6,8]
@@ -17,7 +18,7 @@ describe('RollingWindow', () => {
 describe('Ewma', () => {
   it('tracks a shifting mean', () => {
     const e = new Ewma(0.5);
-    [10, 10, 10].forEach((v) => e.update(v));
+    [10, 10, 10].forEach(v => e.update(v));
     expect(e.mean).toBeCloseTo(10);
     e.update(20);
     expect(e.mean).toBeGreaterThan(10);

@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
+
+import { EventEnvelopeSchema, makeEnvelope, Topics } from '@sentinelops/shared-types';
+
 import { backoffCeiling, backoffDelay, shouldRetry } from './backoff.js';
 import { InMemoryIdempotencyStore } from './idempotency.js';
-import { EventEnvelopeSchema, makeEnvelope, Topics } from '@sentinelops/shared-types';
 
 describe('backoff', () => {
   it('grows exponentially and is capped', () => {

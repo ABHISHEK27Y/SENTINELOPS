@@ -19,7 +19,7 @@ processors:
   resource:
     attributes:
       - key: service.namespace
-        value: "sentinelops"
+        value: 'sentinelops'
         action: insert
 
 exporters:
@@ -39,7 +39,7 @@ exporters:
   # Logs → Loki for log aggregation
   loki:
     endpoint: http://loki:3100/api/v1/push
-    tenant_id: "sentinelops"
+    tenant_id: 'sentinelops'
     labels:
       resource:
         service.name:

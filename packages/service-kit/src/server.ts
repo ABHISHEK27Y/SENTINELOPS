@@ -1,4 +1,6 @@
 import Fastify, { type FastifyInstance } from 'fastify';
+
+import { EventProducer } from '@sentinelops/kafka';
 import { createLogger, type Logger } from '@sentinelops/logger';
 import {
   ServiceHealth,
@@ -8,9 +10,9 @@ import {
   makeEnvelope,
   type FaultType as FaultTypeT,
 } from '@sentinelops/shared-types';
-import { EventProducer } from '@sentinelops/kafka';
-import { createMetrics, type ServiceMetrics } from './metrics.js';
+
 import { FaultController, type FaultParams } from './faults.js';
+import { createMetrics, type ServiceMetrics } from './metrics.js';
 import { TelemetryPublisher } from './telemetry-publisher.js';
 
 export interface ServiceContext {
@@ -28,7 +30,7 @@ export interface ServiceContext {
   stop: () => Promise<void>;
 }
 
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
 export interface CreateServiceOptions {
   serviceName: string;
@@ -49,10 +51,8 @@ export function createService(opts: CreateServiceOptions): ServiceContext {
 
   // Kafka telemetry publishing is opt-in (the docker stack sets KAFKA_TELEMETRY=on)
   // so local `npm run dev` without a broker stays quiet. Always best-effort.
-  const kafkaEnabled = process.env.KAFKA_TELEMETRY === 'on';
-  const producer = kafkaEnabled
-    ? new EventProducer({ logger: log.child({ mod: 'kafka' }) })
-    : null;
+  const kafkaEnabled = process.env['KAFKA_TELEMETRY'] === 'on';
+  const producer = kafkaEnabled ? new EventProducer({ logger: log.child({ mod: 'kafka' }) }) : null;
   const publisher = producer
     ? new TelemetryPublisher(producer, serviceName, metrics.registry, log)
     : null;
@@ -60,18 +60,15 @@ export function createService(opts: CreateServiceOptions): ServiceContext {
   const app = Fastify({ logger: false, disableRequestLogging: true });
 
   // ── Request timing + access logging ──────────────────────────────────
-  app.addHook('onRequest', async (req) => {
+  app.addHook('onRequest', async req => {
     (req as { startTime?: bigint }).startTime = process.hrtime.bigint();
-    const rid =
-      (req.headers['x-request-id'] as string | undefined) ?? crypto.randomUUID();
+    const rid = (req.headers['x-request-id'] as string | undefined) ?? crypto.randomUUID();
     (req as { requestId?: string }).requestId = rid;
   });
 
   app.addHook('onResponse', async (req, reply) => {
     const start = (req as { startTime?: bigint }).startTime;
-    const durationMs = start
-      ? Number(process.hrtime.bigint() - start) / 1e6
-      : 0;
+    const durationMs = start ? Number(process.hrtime.bigint() - start) / 1e6 : 0;
     const route = req.routeOptions?.url ?? req.url;
     const status = String(reply.statusCode);
     const labels = { method: req.method, route, status };
@@ -91,12 +88,13 @@ export function createService(opts: CreateServiceOptions): ServiceContext {
       log.error(line, 'request failed');
       // Ship the error log onto the log.events topic as incident evidence.
       if (producer) {
+        const reqTraceId = (req as { traceId?: string }).traceId;
         void producer.send(
           Topics.logs,
           makeEnvelope({
             type: EventType.LOG_RECORD,
             service: serviceName,
-            traceId: (req as { traceId?: string }).traceId,
+            traceId: reqTraceId,
             payload: {
               level: 'ERROR',
               message: 'request failed',
@@ -104,7 +102,7 @@ export function createService(opts: CreateServiceOptions): ServiceContext {
               fields: { route, status: reply.statusCode, durationMs: line.durationMs },
               ts: new Date().toISOString(),
             },
-          }),
+          } as { type: string; service: string; traceId?: string; payload: unknown })
         );
       }
     } else log.debug(line, 'request');
@@ -113,8 +111,7 @@ export function createService(opts: CreateServiceOptions): ServiceContext {
   // ── Health / readiness / liveness ────────────────────────────────────
   const health = (): ServiceHealth => {
     if (faults.isKilled()) return ServiceHealth.UNHEALTHY;
-    if (faults.dbLatencyMs() > 0 || faults.errorProbability() > 0)
-      return ServiceHealth.DEGRADED;
+    if (faults.dbLatencyMs() > 0 || faults.errorProbability() > 0) return ServiceHealth.DEGRADED;
     return ServiceHealth.HEALTHY;
   };
 
@@ -146,16 +143,13 @@ export function createService(opts: CreateServiceOptions): ServiceContext {
       const fault = faults.enable(type, params ?? {});
       log.warn({ fault: type, params }, 'fault injected');
       return { enabled: fault };
-    },
+    }
   );
-  app.delete<{ Params: { type: FaultTypeT } }>(
-    '/admin/faults/:type',
-    async (req) => {
-      faults.disable(req.params.type);
-      log.info({ fault: req.params.type }, 'fault cleared');
-      return { cleared: req.params.type };
-    },
-  );
+  app.delete<{ Params: { type: FaultTypeT } }>('/admin/faults/:type', async req => {
+    faults.disable(req.params.type);
+    log.info({ fault: req.params.type }, 'fault cleared');
+    return { cleared: req.params.type };
+  });
   app.delete('/admin/faults', async () => {
     faults.clear();
     return { cleared: 'all' };

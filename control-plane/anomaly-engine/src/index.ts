@@ -5,15 +5,12 @@
  * scores (see ADR-0004). Self-observable via /metrics.
  */
 import { Registry, Counter, Histogram, collectDefaultMetrics } from 'prom-client';
-import {
-  EventConsumer,
-  EventProducer,
-  RedisIdempotencyStore,
-} from '@sentinelops/kafka';
-import { AnomalyDetector, type Sample } from '@sentinelops/detection';
-import { startHealthServer } from '@sentinelops/service-kit';
-import { createLogger } from '@sentinelops/logger';
+
 import { getEnv } from '@sentinelops/config';
+import { AnomalyDetector, type Sample } from '@sentinelops/detection';
+import { EventConsumer, EventProducer, RedisIdempotencyStore } from '@sentinelops/kafka';
+import { createLogger } from '@sentinelops/logger';
+import { startHealthServer } from '@sentinelops/service-kit';
 import {
   Topics,
   EventType,
@@ -22,7 +19,7 @@ import {
   type MetricSample,
 } from '@sentinelops/shared-types';
 
-const PORT = Number(process.env.ANOMALY_ENGINE_PORT ?? 8091);
+const PORT = Number(process.env['ANOMALY_ENGINE_PORT'] ?? 8091);
 const log = createLogger({ service: 'anomaly-engine' });
 const env = getEnv();
 
@@ -60,11 +57,9 @@ const consumer = new EventConsumer({
 
 /** Map a metric name to the anomaly event type. */
 function anomalyEventType(metric: string): string {
-  if (metric.includes('latency') || metric.includes('duration'))
-    return EventType.LATENCY_ANOMALY;
+  if (metric.includes('latency') || metric.includes('duration')) return EventType.LATENCY_ANOMALY;
   if (metric.includes('error')) return EventType.ERROR_RATE_ANOMALY;
-  if (metric.includes('cpu') || metric.includes('memory'))
-    return EventType.RESOURCE_ANOMALY;
+  if (metric.includes('cpu') || metric.includes('memory')) return EventType.RESOURCE_ANOMALY;
   if (metric.includes('pool') || metric.includes('queue') || metric.includes('lag'))
     return EventType.SATURATION_ANOMALY;
   return EventType.LATENCY_ANOMALY;
@@ -80,7 +75,7 @@ function extractSamples(service: string, payload: unknown): Sample[] {
   };
   if (payload && typeof payload === 'object') {
     const p = payload as { samples?: unknown; metric?: unknown };
-    if (Array.isArray(p.samples)) p.samples.forEach((s) => push(s as MetricSample));
+    if (Array.isArray(p.samples)) p.samples.forEach(s => push(s as MetricSample));
     else if (typeof p.metric === 'string') push(payload as MetricSample);
   }
   return out;
@@ -97,7 +92,7 @@ async function main(): Promise<void> {
 
   await consumer.run({
     topics: [Topics.telemetry, Topics.metrics],
-    handler: async (envelope) => {
+    handler: async envelope => {
       const samples = extractSamples(envelope.service, envelope.payload);
       for (const sample of samples) {
         const end = mLatency.startTimer();
@@ -115,7 +110,7 @@ async function main(): Promise<void> {
             score: anomaly.anomalyScore.toFixed(2),
             severity: anomaly.severity,
           },
-          'anomaly detected',
+          'anomaly detected'
         );
         await producer.send(
           Topics.anomaly,
@@ -124,7 +119,7 @@ async function main(): Promise<void> {
             service: anomaly.service,
             traceId: envelope.traceId,
             payload: anomaly,
-          }),
+          } as { type: string; service: string; traceId?: string; payload: unknown })
         );
       }
     },
@@ -141,7 +136,7 @@ async function main(): Promise<void> {
   process.on('SIGINT', () => void shutdown('SIGINT'));
 }
 
-main().catch((err) => {
+main().catch(err => {
   log.error({ err: (err as Error).message }, 'anomaly-engine failed');
   process.exit(1);
 });

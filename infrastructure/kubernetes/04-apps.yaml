@@ -17,17 +17,17 @@ spec:
         - name: migrate
           image: sentinelops/app:local
           imagePullPolicy: IfNotPresent
-          command: ["npm", "run", "db:migrate"]
+          command: ['npm', 'run', 'db:migrate']
           envFrom:
             - configMapRef: { name: sentinelops-config }
             - secretRef: { name: sentinelops-secrets }
           resources:
             limits:
-              memory: "256Mi"
-              cpu: "200m"
+              memory: '256Mi'
+              cpu: '200m'
             requests:
-              memory: "128Mi"
-              cpu: "100m"
+              memory: '128Mi'
+              cpu: '100m'
 ---
 # ── Data-plane services ─────────────────────────────────────────────────
 apiVersion: apps/v1
@@ -43,19 +43,33 @@ spec:
         - name: payment-service
           image: sentinelops/app:local
           imagePullPolicy: IfNotPresent
-          command: ["npm", "run", "start", "-w", "@sentinelops/payment-service"]
-          envFrom: [{ configMapRef: { name: sentinelops-config } }, { secretRef: { name: sentinelops-secrets } }]
-          env: [{ name: PAYMENT_SERVICE_PORT, value: "8083" }]
+          command: ['npm', 'run', 'start', '-w', '@sentinelops/payment-service']
+          envFrom:
+            [
+              { configMapRef: { name: sentinelops-config } },
+              { secretRef: { name: sentinelops-secrets } },
+            ]
+          env: [{ name: PAYMENT_SERVICE_PORT, value: '8083' }]
           ports: [{ containerPort: 8083 }]
-          readinessProbe: { httpGet: { path: /health/ready, port: 8083 }, initialDelaySeconds: 8, periodSeconds: 10 }
-          livenessProbe: { httpGet: { path: /health/live, port: 8083 }, initialDelaySeconds: 15, periodSeconds: 15 }
+          readinessProbe:
+            {
+              httpGet: { path: /health/ready, port: 8083 },
+              initialDelaySeconds: 8,
+              periodSeconds: 10,
+            }
+          livenessProbe:
+            {
+              httpGet: { path: /health/live, port: 8083 },
+              initialDelaySeconds: 15,
+              periodSeconds: 15,
+            }
           resources:
             limits:
-              memory: "512Mi"
-              cpu: "500m"
+              memory: '512Mi'
+              cpu: '500m'
             requests:
-              memory: "256Mi"
-              cpu: "250m"
+              memory: '256Mi'
+              cpu: '250m'
 ---
 apiVersion: v1
 kind: Service
@@ -75,19 +89,33 @@ spec:
         - name: notification-service
           image: sentinelops/app:local
           imagePullPolicy: IfNotPresent
-          command: ["npm", "run", "start", "-w", "@sentinelops/notification-service"]
-          envFrom: [{ configMapRef: { name: sentinelops-config } }, { secretRef: { name: sentinelops-secrets } }]
-          env: [{ name: NOTIFICATION_SERVICE_PORT, value: "8084" }]
+          command: ['npm', 'run', 'start', '-w', '@sentinelops/notification-service']
+          envFrom:
+            [
+              { configMapRef: { name: sentinelops-config } },
+              { secretRef: { name: sentinelops-secrets } },
+            ]
+          env: [{ name: NOTIFICATION_SERVICE_PORT, value: '8084' }]
           ports: [{ containerPort: 8084 }]
-          readinessProbe: { httpGet: { path: /health/ready, port: 8084 }, initialDelaySeconds: 8, periodSeconds: 10 }
-          livenessProbe: { httpGet: { path: /health/live, port: 8084 }, initialDelaySeconds: 15, periodSeconds: 15 }
+          readinessProbe:
+            {
+              httpGet: { path: /health/ready, port: 8084 },
+              initialDelaySeconds: 8,
+              periodSeconds: 10,
+            }
+          livenessProbe:
+            {
+              httpGet: { path: /health/live, port: 8084 },
+              initialDelaySeconds: 15,
+              periodSeconds: 15,
+            }
           resources:
             limits:
-              memory: "256Mi"
-              cpu: "300m"
+              memory: '256Mi'
+              cpu: '300m'
             requests:
-              memory: "128Mi"
-              cpu: "150m"
+              memory: '128Mi'
+              cpu: '150m'
 ---
 apiVersion: v1
 kind: Service
@@ -107,19 +135,33 @@ spec:
         - name: user-service
           image: sentinelops/app:local
           imagePullPolicy: IfNotPresent
-          command: ["npm", "run", "start", "-w", "@sentinelops/user-service"]
-          envFrom: [{ configMapRef: { name: sentinelops-config } }, { secretRef: { name: sentinelops-secrets } }]
-          env: [{ name: USER_SERVICE_PORT, value: "8081" }]
+          command: ['npm', 'run', 'start', '-w', '@sentinelops/user-service']
+          envFrom:
+            [
+              { configMapRef: { name: sentinelops-config } },
+              { secretRef: { name: sentinelops-secrets } },
+            ]
+          env: [{ name: USER_SERVICE_PORT, value: '8081' }]
           ports: [{ containerPort: 8081 }]
-          readinessProbe: { httpGet: { path: /health/ready, port: 8081 }, initialDelaySeconds: 8, periodSeconds: 10 }
-          livenessProbe: { httpGet: { path: /health/live, port: 8081 }, initialDelaySeconds: 15, periodSeconds: 15 }
+          readinessProbe:
+            {
+              httpGet: { path: /health/ready, port: 8081 },
+              initialDelaySeconds: 8,
+              periodSeconds: 10,
+            }
+          livenessProbe:
+            {
+              httpGet: { path: /health/live, port: 8081 },
+              initialDelaySeconds: 15,
+              periodSeconds: 15,
+            }
           resources:
             limits:
-              memory: "256Mi"
-              cpu: "300m"
+              memory: '256Mi'
+              cpu: '300m'
             requests:
-              memory: "128Mi"
-              cpu: "150m"
+              memory: '128Mi'
+              cpu: '150m'
 ---
 apiVersion: v1
 kind: Service
@@ -139,22 +181,36 @@ spec:
         - name: order-service
           image: sentinelops/app:local
           imagePullPolicy: IfNotPresent
-          command: ["npm", "run", "start", "-w", "@sentinelops/order-service"]
-          envFrom: [{ configMapRef: { name: sentinelops-config } }, { secretRef: { name: sentinelops-secrets } }]
+          command: ['npm', 'run', 'start', '-w', '@sentinelops/order-service']
+          envFrom:
+            [
+              { configMapRef: { name: sentinelops-config } },
+              { secretRef: { name: sentinelops-secrets } },
+            ]
           env:
-            - { name: ORDER_SERVICE_PORT, value: "8082" }
-            - { name: PAYMENT_SERVICE_URL, value: "http://payment-service:8083" }
-            - { name: NOTIFICATION_SERVICE_URL, value: "http://notification-service:8084" }
+            - { name: ORDER_SERVICE_PORT, value: '8082' }
+            - { name: PAYMENT_SERVICE_URL, value: 'http://payment-service:8083' }
+            - { name: NOTIFICATION_SERVICE_URL, value: 'http://notification-service:8084' }
           ports: [{ containerPort: 8082 }]
-          readinessProbe: { httpGet: { path: /health/ready, port: 8082 }, initialDelaySeconds: 8, periodSeconds: 10 }
-          livenessProbe: { httpGet: { path: /health/live, port: 8082 }, initialDelaySeconds: 15, periodSeconds: 15 }
+          readinessProbe:
+            {
+              httpGet: { path: /health/ready, port: 8082 },
+              initialDelaySeconds: 8,
+              periodSeconds: 10,
+            }
+          livenessProbe:
+            {
+              httpGet: { path: /health/live, port: 8082 },
+              initialDelaySeconds: 15,
+              periodSeconds: 15,
+            }
           resources:
             limits:
-              memory: "256Mi"
-              cpu: "300m"
+              memory: '256Mi'
+              cpu: '300m'
             requests:
-              memory: "128Mi"
-              cpu: "150m"
+              memory: '128Mi'
+              cpu: '150m'
 ---
 apiVersion: v1
 kind: Service
@@ -174,22 +230,36 @@ spec:
         - name: api-gateway
           image: sentinelops/app:local
           imagePullPolicy: IfNotPresent
-          command: ["npm", "run", "start", "-w", "@sentinelops/api-gateway"]
-          envFrom: [{ configMapRef: { name: sentinelops-config } }, { secretRef: { name: sentinelops-secrets } }]
+          command: ['npm', 'run', 'start', '-w', '@sentinelops/api-gateway']
+          envFrom:
+            [
+              { configMapRef: { name: sentinelops-config } },
+              { secretRef: { name: sentinelops-secrets } },
+            ]
           env:
-            - { name: API_GATEWAY_PORT, value: "8080" }
-            - { name: USER_SERVICE_URL, value: "http://user-service:8081" }
-            - { name: ORDER_SERVICE_URL, value: "http://order-service:8082" }
+            - { name: API_GATEWAY_PORT, value: '8080' }
+            - { name: USER_SERVICE_URL, value: 'http://user-service:8081' }
+            - { name: ORDER_SERVICE_URL, value: 'http://order-service:8082' }
           ports: [{ containerPort: 8080 }]
-          readinessProbe: { httpGet: { path: /health/ready, port: 8080 }, initialDelaySeconds: 8, periodSeconds: 10 }
-          livenessProbe: { httpGet: { path: /health/live, port: 8080 }, initialDelaySeconds: 15, periodSeconds: 15 }
+          readinessProbe:
+            {
+              httpGet: { path: /health/ready, port: 8080 },
+              initialDelaySeconds: 8,
+              periodSeconds: 10,
+            }
+          livenessProbe:
+            {
+              httpGet: { path: /health/live, port: 8080 },
+              initialDelaySeconds: 15,
+              periodSeconds: 15,
+            }
           resources:
             limits:
-              memory: "256Mi"
-              cpu: "300m"
+              memory: '256Mi'
+              cpu: '300m'
             requests:
-              memory: "128Mi"
-              cpu: "150m"
+              memory: '128Mi'
+              cpu: '150m'
 ---
 apiVersion: v1
 kind: Service
@@ -210,18 +280,27 @@ spec:
         - name: anomaly-engine
           image: sentinelops/app:local
           imagePullPolicy: IfNotPresent
-          command: ["npm", "run", "start", "-w", "@sentinelops/anomaly-engine"]
-          envFrom: [{ configMapRef: { name: sentinelops-config } }, { secretRef: { name: sentinelops-secrets } }]
-          env: [{ name: ANOMALY_ENGINE_PORT, value: "8091" }]
+          command: ['npm', 'run', 'start', '-w', '@sentinelops/anomaly-engine']
+          envFrom:
+            [
+              { configMapRef: { name: sentinelops-config } },
+              { secretRef: { name: sentinelops-secrets } },
+            ]
+          env: [{ name: ANOMALY_ENGINE_PORT, value: '8091' }]
           ports: [{ containerPort: 8091 }]
-          readinessProbe: { httpGet: { path: /health/ready, port: 8091 }, initialDelaySeconds: 10, periodSeconds: 10 }
+          readinessProbe:
+            {
+              httpGet: { path: /health/ready, port: 8091 },
+              initialDelaySeconds: 10,
+              periodSeconds: 10,
+            }
           resources:
             limits:
-              memory: "512Mi"
-              cpu: "500m"
+              memory: '512Mi'
+              cpu: '500m'
             requests:
-              memory: "256Mi"
-              cpu: "250m"
+              memory: '256Mi'
+              cpu: '250m'
 ---
 apiVersion: v1
 kind: Service
@@ -241,18 +320,27 @@ spec:
         - name: incident-engine
           image: sentinelops/app:local
           imagePullPolicy: IfNotPresent
-          command: ["npm", "run", "start", "-w", "@sentinelops/incident-engine"]
-          envFrom: [{ configMapRef: { name: sentinelops-config } }, { secretRef: { name: sentinelops-secrets } }]
-          env: [{ name: INCIDENT_ENGINE_PORT, value: "8090" }]
+          command: ['npm', 'run', 'start', '-w', '@sentinelops/incident-engine']
+          envFrom:
+            [
+              { configMapRef: { name: sentinelops-config } },
+              { secretRef: { name: sentinelops-secrets } },
+            ]
+          env: [{ name: INCIDENT_ENGINE_PORT, value: '8090' }]
           ports: [{ containerPort: 8090 }]
-          readinessProbe: { httpGet: { path: /health/ready, port: 8090 }, initialDelaySeconds: 10, periodSeconds: 10 }
+          readinessProbe:
+            {
+              httpGet: { path: /health/ready, port: 8090 },
+              initialDelaySeconds: 10,
+              periodSeconds: 10,
+            }
           resources:
             limits:
-              memory: "512Mi"
-              cpu: "500m"
+              memory: '512Mi'
+              cpu: '500m'
             requests:
-              memory: "256Mi"
-              cpu: "250m"
+              memory: '256Mi'
+              cpu: '250m'
 ---
 apiVersion: v1
 kind: Service
@@ -272,18 +360,27 @@ spec:
         - name: ingestor
           image: sentinelops/app:local
           imagePullPolicy: IfNotPresent
-          command: ["npm", "run", "start", "-w", "@sentinelops/ingestor"]
-          envFrom: [{ configMapRef: { name: sentinelops-config } }, { secretRef: { name: sentinelops-secrets } }]
-          env: [{ name: INGESTOR_PORT, value: "8095" }]
+          command: ['npm', 'run', 'start', '-w', '@sentinelops/ingestor']
+          envFrom:
+            [
+              { configMapRef: { name: sentinelops-config } },
+              { secretRef: { name: sentinelops-secrets } },
+            ]
+          env: [{ name: INGESTOR_PORT, value: '8095' }]
           ports: [{ containerPort: 8095 }]
-          readinessProbe: { httpGet: { path: /health/ready, port: 8095 }, initialDelaySeconds: 10, periodSeconds: 10 }
+          readinessProbe:
+            {
+              httpGet: { path: /health/ready, port: 8095 },
+              initialDelaySeconds: 10,
+              periodSeconds: 10,
+            }
           resources:
             limits:
-              memory: "512Mi"
-              cpu: "500m"
+              memory: '512Mi'
+              cpu: '500m'
             requests:
-              memory: "256Mi"
-              cpu: "250m"
+              memory: '256Mi'
+              cpu: '250m'
 ---
 apiVersion: v1
 kind: Service
@@ -304,18 +401,27 @@ spec:
         - name: api
           image: sentinelops/app:local
           imagePullPolicy: IfNotPresent
-          command: ["npm", "run", "start", "-w", "@sentinelops/api"]
-          envFrom: [{ configMapRef: { name: sentinelops-config } }, { secretRef: { name: sentinelops-secrets } }]
-          env: [{ name: API_PORT, value: "4000" }]
+          command: ['npm', 'run', 'start', '-w', '@sentinelops/api']
+          envFrom:
+            [
+              { configMapRef: { name: sentinelops-config } },
+              { secretRef: { name: sentinelops-secrets } },
+            ]
+          env: [{ name: API_PORT, value: '4000' }]
           ports: [{ containerPort: 4000 }]
-          readinessProbe: { httpGet: { path: /api/health, port: 4000 }, initialDelaySeconds: 10, periodSeconds: 10 }
+          readinessProbe:
+            {
+              httpGet: { path: /api/health, port: 4000 },
+              initialDelaySeconds: 10,
+              periodSeconds: 10,
+            }
           resources:
             limits:
-              memory: "512Mi"
-              cpu: "500m"
+              memory: '512Mi'
+              cpu: '500m'
             requests:
-              memory: "256Mi"
-              cpu: "250m"
+              memory: '256Mi'
+              cpu: '250m'
 ---
 apiVersion: v1
 kind: Service

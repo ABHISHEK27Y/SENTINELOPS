@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
-import { apiFetch } from './api';
+import { apiFetch } from './api.js';
 
 /** GET a path with loading/error state and periodic refresh. */
 export function useApi<T>(path: string, refreshMs = 5000) {

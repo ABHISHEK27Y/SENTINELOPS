@@ -1,6 +1,6 @@
 import { startTelemetry, stopTelemetry } from '@sentinelops/service-kit/telemetry';
 
-const PORT = Number(process.env.NOTIFICATION_SERVICE_PORT ?? 8084);
+const PORT = Number(process.env['NOTIFICATION_SERVICE_PORT'] ?? 8084);
 
 await startTelemetry('notification-service');
 const { buildNotificationService } = await import('./app.js');

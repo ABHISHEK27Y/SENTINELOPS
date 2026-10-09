@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { DependencyGraph } from './graph.js';
-import { Correlator } from './correlator.js';
-import { canTransition, transition, isTerminal } from './lifecycle.js';
+
 import type { Anomaly } from '@sentinelops/shared-types';
+
+import { Correlator } from './correlator.js';
+import { DependencyGraph } from './graph.js';
+import { canTransition, transition, isTerminal } from './lifecycle.js';
 
 function anomaly(service: string, metric: string, tsMs: number): Anomaly {
   return {
@@ -60,9 +62,7 @@ describe('Correlator', () => {
     expect(r3.isNew).toBe(false);
     expect(r4.isNew).toBe(false);
     expect(r4.correlationId).toBe('corr-1');
-    expect(new Set(r4.services)).toEqual(
-      new Set(['postgres', 'payment-service', 'order-service']),
-    );
+    expect(new Set(r4.services)).toEqual(new Set(['postgres', 'payment-service', 'order-service']));
     expect(r4.anomalyCount).toBe(4);
   });
 
@@ -83,7 +83,7 @@ describe('Correlator', () => {
     c.ingest(anomaly('payment-service', 'request_latency_ms', t0), t0);
     const later = c.ingest(
       anomaly('payment-service', 'request_latency_ms', t0 + 40_000),
-      t0 + 40_000,
+      t0 + 40_000
     );
     expect(later.isNew).toBe(true);
   });

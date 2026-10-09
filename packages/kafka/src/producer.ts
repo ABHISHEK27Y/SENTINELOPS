@@ -1,6 +1,8 @@
 import { Kafka, type Producer } from 'kafkajs';
+
 import { createLogger, type Logger } from '@sentinelops/logger';
 import type { EventEnvelope, TopicName } from '@sentinelops/shared-types';
+
 import { createKafka } from './client.js';
 
 /**
@@ -14,9 +16,7 @@ export class EventProducer {
   private connecting: Promise<void> | null = null;
   private log: Logger;
 
-  constructor(
-    private opts: { kafka?: Kafka; strict?: boolean; logger?: Logger } = {},
-  ) {
+  constructor(private opts: { kafka?: Kafka; strict?: boolean; logger?: Logger } = {}) {
     const kafka = opts.kafka ?? createKafka();
     this.producer = kafka.producer({
       allowAutoTopicCreation: true,
@@ -35,10 +35,7 @@ export class EventProducer {
         this.log.info('kafka producer connected');
       })
       .catch((err: unknown) => {
-        this.log.warn(
-          { err: (err as Error).message },
-          'kafka producer connect failed',
-        );
+        this.log.warn({ err: (err as Error).message }, 'kafka producer connect failed');
         if (this.opts.strict) throw err;
       })
       .finally(() => {
@@ -49,11 +46,7 @@ export class EventProducer {
   }
 
   /** Send one enveloped event. Key defaults to the envelope's service. */
-  async send<T>(
-    topic: TopicName,
-    envelope: EventEnvelope<T>,
-    key?: string,
-  ): Promise<boolean> {
+  async send<T>(topic: TopicName, envelope: EventEnvelope<T>, key?: string): Promise<boolean> {
     try {
       if (!this.connected) await this.connect();
       if (!this.connected) return false; // connect failed (non-strict)
@@ -71,7 +64,7 @@ export class EventProducer {
     } catch (err) {
       this.log.warn(
         { topic, type: envelope.type, err: (err as Error).message },
-        'kafka send failed',
+        'kafka send failed'
       );
       if (this.opts.strict) throw err;
       return false;

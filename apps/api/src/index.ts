@@ -1,30 +1,35 @@
-import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
 import websocket from '@fastify/websocket';
-import { createLogger } from '@sentinelops/logger';
-import { getEnv } from '@sentinelops/config';
-import { EventConsumer, EventProducer } from '@sentinelops/kafka';
-import { Topics } from '@sentinelops/shared-types';
+import Fastify from 'fastify';
+
 import { getLlmProvider } from '@sentinelops/ai';
+import { getEnv } from '@sentinelops/config';
 import { closePool } from '@sentinelops/db';
+import { EventConsumer, EventProducer } from '@sentinelops/kafka';
+import { createLogger } from '@sentinelops/logger';
+import { Topics } from '@sentinelops/shared-types';
+
 import { seedUsers, registerAuthRoutes } from './auth.js';
-import { buildRunbookRetriever } from './runbooks.js';
-import { registerServiceRoutes } from './routes/services.js';
+import { registerFailureRoutes } from './routes/failures.js';
 import { registerIncidentRoutes } from './routes/incidents.js';
 import { registerRemediationRoutes } from './routes/remediation.js';
-import { registerFailureRoutes } from './routes/failures.js';
+import { registerServiceRoutes } from './routes/services.js';
+import { buildRunbookRetriever } from './runbooks.js';
 
-const PORT = Number(process.env.API_PORT ?? 4000);
+const PORT = Number(process.env['API_PORT'] ?? 4000);
 const log = createLogger({ service: 'api' });
 const env = getEnv();
 
 /** Parse CORS_ORIGIN env var (comma-separated) or default to localhost for dev. */
 function corsOrigin(): string | string[] | boolean {
-  const raw = process.env.CORS_ORIGIN?.trim();
+  const raw = process.env['CORS_ORIGIN']?.trim();
   if (!raw) return true; // dev: allow all
   if (raw === '*') return true;
-  return raw.split(',').map(s => s.trim()).filter(Boolean);
+  return raw
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean);
 }
 
 async function main(): Promise<void> {
@@ -57,24 +62,37 @@ async function main(): Promise<void> {
 
   // WebSocket: broadcast control-plane events to connected dashboards.
   const sockets = new Set<{ send: (data: string) => void }>();
-  app.get('/ws', { websocket: true }, (socket) => {
+  app.get('/ws', { websocket: true }, socket => {
     sockets.add(socket);
     socket.send(JSON.stringify({ type: 'hello', ts: new Date().toISOString() }));
     socket.on('close', () => sockets.delete(socket));
   });
 
-  const wsConsumer = new EventConsumer({ groupId: `api-ws-${process.pid}`, dlqProducer: producer, logger: log.child({ mod: 'ws' }) });
+  const wsConsumer = new EventConsumer({
+    groupId: `api-ws-${process.pid}`,
+    dlqProducer: producer,
+    logger: log.child({ mod: 'ws' }),
+  });
   wsConsumer
     .run({
       topics: [Topics.incident, Topics.remediation, Topics.recovery, Topics.anomaly],
       handler: async (envelope, ctx) => {
-        const msg = JSON.stringify({ topic: ctx.topic, type: envelope.type, payload: envelope.payload, ts: envelope.timestamp });
+        const msg = JSON.stringify({
+          topic: ctx.topic,
+          type: envelope.type,
+          payload: envelope.payload,
+          ts: envelope.timestamp,
+        });
         for (const s of sockets) {
-          try { s.send(msg); } catch { /* ignore */ }
+          try {
+            s.send(msg);
+          } catch {
+            /* ignore */
+          }
         }
       },
     })
-    .catch((err) => log.warn({ err: (err as Error).message }, 'ws consumer not started'));
+    .catch(err => log.warn({ err: (err as Error).message }, 'ws consumer not started'));
 
   await app.listen({ port: PORT, host: '0.0.0.0' });
   log.info({ port: PORT }, 'platform api listening');
@@ -91,7 +109,7 @@ async function main(): Promise<void> {
   process.on('SIGINT', () => void shutdown('SIGINT'));
 }
 
-main().catch((err) => {
+main().catch(err => {
   log.error({ err: (err as Error).message }, 'api failed to start');
   process.exit(1);
 });

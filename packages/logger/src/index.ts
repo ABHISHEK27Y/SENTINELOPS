@@ -17,9 +17,8 @@ export interface LoggerOptions {
  *   { timestamp, service, level, message, traceId, requestId, ... }
  */
 export function createLogger(opts: LoggerOptions): Logger {
-  const level = opts.level ?? process.env.LOG_LEVEL ?? 'info';
-  const pretty =
-    opts.pretty ?? (process.env.NODE_ENV !== 'production' && process.stdout.isTTY);
+  const level = opts.level ?? process.env['LOG_LEVEL'] ?? 'info';
+  const pretty = opts.pretty ?? (process.env['NODE_ENV'] !== 'production' && process.stdout.isTTY);
 
   return pino({
     level,
@@ -59,7 +58,7 @@ export function createLogger(opts: LoggerOptions): Logger {
 /** Attach request-scoped correlation fields. */
 export function withRequestContext(
   logger: Logger,
-  ctx: { requestId?: string; traceId?: string },
+  ctx: { requestId?: string; traceId?: string }
 ): Logger {
   return logger.child(ctx);
 }

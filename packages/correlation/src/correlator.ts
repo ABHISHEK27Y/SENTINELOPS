@@ -1,4 +1,5 @@
 import type { Anomaly } from '@sentinelops/shared-types';
+
 import { DependencyGraph } from './graph.js';
 
 /**
@@ -40,7 +41,7 @@ export class Correlator {
 
   constructor(
     private graph: DependencyGraph,
-    opts: CorrelatorOptions = {},
+    opts: CorrelatorOptions = {}
   ) {
     this.windowMs = opts.windowMs ?? 60_000;
     this.maxHops = opts.maxHops ?? 2;
@@ -84,10 +85,7 @@ export class Correlator {
     for (const group of this.groups.values()) {
       if (nowMs - group.lastSeen > this.windowMs) continue;
       for (const svc of group.services) {
-        if (
-          svc === anomaly.service ||
-          this.graph.related(svc, anomaly.service, this.maxHops)
-        ) {
+        if (svc === anomaly.service || this.graph.related(svc, anomaly.service, this.maxHops)) {
           return group;
         }
       }

@@ -12,8 +12,8 @@ groups:
         labels:
           severity: critical
         annotations:
-          summary: "PostgreSQL is down"
-          description: "PostgreSQL has been down for more than 1 minute"
+          summary: 'PostgreSQL is down'
+          description: 'PostgreSQL has been down for more than 1 minute'
 
       - alert: PostgresHighConnections
         expr: pg_stat_database_numbackends / pg_settings_max_connections > 0.8
@@ -21,8 +21,8 @@ groups:
         labels:
           severity: warning
         annotations:
-          summary: "PostgreSQL connection pool near exhaustion"
-          description: "Connection usage is above 80%"
+          summary: 'PostgreSQL connection pool near exhaustion'
+          description: 'Connection usage is above 80%'
 
       # Redis
       - alert: RedisDown
@@ -31,8 +31,8 @@ groups:
         labels:
           severity: critical
         annotations:
-          summary: "Redis is down"
-          description: "Redis has been down for more than 1 minute"
+          summary: 'Redis is down'
+          description: 'Redis has been down for more than 1 minute'
 
       - alert: RedisHighMemory
         expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.9
@@ -40,8 +40,8 @@ groups:
         labels:
           severity: warning
         annotations:
-          summary: "Redis memory usage high"
-          description: "Redis memory usage is above 90%"
+          summary: 'Redis memory usage high'
+          description: 'Redis memory usage is above 90%'
 
       # Kafka
       - alert: KafkaDown
@@ -50,8 +50,8 @@ groups:
         labels:
           severity: critical
         annotations:
-          summary: "Kafka broker is down"
-          description: "Kafka broker has been down for more than 1 minute"
+          summary: 'Kafka broker is down'
+          description: 'Kafka broker has been down for more than 1 minute'
 
       - alert: KafkaHighConsumerLag
         expr: kafka_consumer_lag > 10000
@@ -59,8 +59,8 @@ groups:
         labels:
           severity: warning
         annotations:
-          summary: "Kafka consumer lag high"
-          description: "Consumer lag exceeds 10k messages"
+          summary: 'Kafka consumer lag high'
+          description: 'Consumer lag exceeds 10k messages'
 
   - name: sentinelops.services
     interval: 30s
@@ -72,8 +72,8 @@ groups:
         labels:
           severity: critical
         annotations:
-          summary: "Service {{ $labels.instance }} is down"
-          description: "{{ $labels.job }} service {{ $labels.instance }} has been down for 2 minutes"
+          summary: 'Service {{ $labels.instance }} is down'
+          description: '{{ $labels.job }} service {{ $labels.instance }} has been down for 2 minutes'
 
       - alert: ServiceHighErrorRate
         expr: |
@@ -85,8 +85,8 @@ groups:
         labels:
           severity: critical
         annotations:
-          summary: "High error rate on {{ $labels.service }} ({{ $labels.instance }})"
-          description: "Error rate exceeds 5% for 5 minutes"
+          summary: 'High error rate on {{ $labels.service }} ({{ $labels.instance }})'
+          description: 'Error rate exceeds 5% for 5 minutes'
 
       - alert: ServiceHighLatency
         expr: |
@@ -95,8 +95,8 @@ groups:
         labels:
           severity: warning
         annotations:
-          summary: "High p95 latency on {{ $labels.service }} ({{ $labels.instance }})"
-          description: "p95 latency exceeds 2 seconds for 5 minutes"
+          summary: 'High p95 latency on {{ $labels.service }} ({{ $labels.instance }})'
+          description: 'p95 latency exceeds 2 seconds for 5 minutes'
 
       - alert: ServiceHighDbPoolUtilization
         expr: db_pool_utilization{job="sentinelops-services"} > 0.85
@@ -104,8 +104,8 @@ groups:
         labels:
           severity: warning
         annotations:
-          summary: "DB pool utilization high on {{ $labels.service }}"
-          description: "Database connection pool utilization exceeds 85%"
+          summary: 'DB pool utilization high on {{ $labels.service }}'
+          description: 'Database connection pool utilization exceeds 85%'
 
       - alert: ServiceHighMemoryUsage
         expr: memory_usage{job="sentinelops-services"} > 500000000
@@ -113,8 +113,8 @@ groups:
         labels:
           severity: warning
         annotations:
-          summary: "High memory usage on {{ $labels.service }}"
-          description: "Memory usage exceeds 500MB for 10 minutes"
+          summary: 'High memory usage on {{ $labels.service }}'
+          description: 'Memory usage exceeds 500MB for 10 minutes'
 
       # Control plane
       - alert: ControlPlaneServiceDown
@@ -123,8 +123,8 @@ groups:
         labels:
           severity: critical
         annotations:
-          summary: "Control plane service {{ $labels.instance }} is down"
-          description: "Control plane service {{ $labels.instance }} has been down for 2 minutes"
+          summary: 'Control plane service {{ $labels.instance }} is down'
+          description: 'Control plane service {{ $labels.instance }} has been down for 2 minutes'
 
       - alert: IncidentEngineHighOpenGroups
         expr: open_correlation_groups{job="sentinelops-control-plane"} > 50
@@ -132,8 +132,8 @@ groups:
         labels:
           severity: warning
         annotations:
-          summary: "High number of open correlation groups"
-          description: "Incident engine has more than 50 open correlation groups"
+          summary: 'High number of open correlation groups'
+          description: 'Incident engine has more than 50 open correlation groups'
 
       - alert: AnomalyEngineNoAnomalies
         expr: rate(anomalies_emitted_total{job="sentinelops-control-plane"}[10m]) == 0
@@ -141,7 +141,7 @@ groups:
         labels:
           severity: info
         annotations:
-          summary: "No anomalies detected recently"
+          summary: 'No anomalies detected recently'
           description: "Anomaly engine hasn't emitted any anomalies in 10 minutes"
 
   - name: sentinelops.platform
@@ -153,8 +153,8 @@ groups:
         labels:
           severity: critical
         annotations:
-          summary: "Platform API is down"
-          description: "The platform API has been down for more than 1 minute"
+          summary: 'Platform API is down'
+          description: 'The platform API has been down for more than 1 minute'
 
       - alert: APIHighErrorRate
         expr: |
@@ -166,8 +166,8 @@ groups:
         labels:
           severity: critical
         annotations:
-          summary: "Platform API high error rate"
-          description: "Platform API error rate exceeds 5%"
+          summary: 'Platform API high error rate'
+          description: 'Platform API error rate exceeds 5%'
 
   - name: sentinelops.observability
     interval: 30s
@@ -178,8 +178,8 @@ groups:
         labels:
           severity: critical
         annotations:
-          summary: "Prometheus is down"
-          description: "Prometheus has been down for more than 1 minute"
+          summary: 'Prometheus is down'
+          description: 'Prometheus has been down for more than 1 minute'
 
       - alert: PrometheusHighScrapeFailures
         expr: |
@@ -189,8 +189,8 @@ groups:
         labels:
           severity: warning
         annotations:
-          summary: "Prometheus scrape sample limit exceeded"
-          description: "Prometheus scrape for {{ $labels.job }} is hitting sample limits"
+          summary: 'Prometheus scrape sample limit exceeded'
+          description: 'Prometheus scrape for {{ $labels.job }} is hitting sample limits'
 
       - alert: OTelCollectorDown
         expr: up{job="otel-collector"} == 0
@@ -198,8 +198,8 @@ groups:
         labels:
           severity: critical
         annotations:
-          summary: "OTel Collector is down"
-          description: "OpenTelemetry Collector has been down for more than 1 minute"
+          summary: 'OTel Collector is down'
+          description: 'OpenTelemetry Collector has been down for more than 1 minute'
 
       - alert: LokiDown
         expr: up{job="loki"} == 0
@@ -207,5 +207,5 @@ groups:
         labels:
           severity: critical
         annotations:
-          summary: "Loki is down"
-          description: "Loki log aggregation has been down for more than 1 minute"
+          summary: 'Loki is down'
+          description: 'Loki log aggregation has been down for more than 1 minute'

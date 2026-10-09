@@ -6,17 +6,14 @@
  * unique correlation_id (see ARCHITECTURE §6, §7).
  */
 import { Registry, Counter, Gauge, collectDefaultMetrics } from 'prom-client';
-import {
-  EventConsumer,
-  EventProducer,
-  RedisIdempotencyStore,
-} from '@sentinelops/kafka';
-import { DependencyGraph, Correlator } from '@sentinelops/correlation';
-import { rankRootCauses } from '@sentinelops/root-cause';
-import { getPool, closePool } from '@sentinelops/db';
-import { startHealthServer } from '@sentinelops/service-kit';
-import { createLogger } from '@sentinelops/logger';
+
 import { getEnv } from '@sentinelops/config';
+import { DependencyGraph, Correlator } from '@sentinelops/correlation';
+import { getPool, closePool } from '@sentinelops/db';
+import { EventConsumer, EventProducer, RedisIdempotencyStore } from '@sentinelops/kafka';
+import { createLogger } from '@sentinelops/logger';
+import { rankRootCauses } from '@sentinelops/root-cause';
+import { startHealthServer } from '@sentinelops/service-kit';
 import {
   Topics,
   EventType,
@@ -25,10 +22,11 @@ import {
   AnomalySchema,
   type Anomaly,
 } from '@sentinelops/shared-types';
-import { SERVICE_DEPENDENCIES } from './topology.js';
-import { severityForGroup } from './severity.js';
 
-const PORT = Number(process.env.INCIDENT_ENGINE_PORT ?? 8090);
+import { severityForGroup } from './severity.js';
+import { SERVICE_DEPENDENCIES } from './topology.js';
+
+const PORT = Number(process.env['INCIDENT_ENGINE_PORT'] ?? 8090);
 const log = createLogger({ service: 'incident-engine' });
 const env = getEnv();
 
@@ -70,9 +68,19 @@ async function persistAnomaly(a: Anomaly, incidentId: string): Promise<void> {
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
      ON CONFLICT (id) DO NOTHING`,
     [
-      a.anomalyId, a.service, a.metric, a.value, a.baseline, a.deviation,
-      a.anomalyScore, a.method, a.severity, incidentId, a.windowStart, a.windowEnd,
-    ],
+      a.anomalyId,
+      a.service,
+      a.metric,
+      a.value,
+      a.baseline,
+      a.deviation,
+      a.anomalyScore,
+      a.method,
+      a.severity,
+      incidentId,
+      a.windowStart,
+      a.windowEnd,
+    ]
   );
 }
 
@@ -80,12 +88,12 @@ async function appendTimeline(
   incidentId: string,
   kind: string,
   message: string,
-  data: Record<string, unknown> = {},
+  data: Record<string, unknown> = {}
 ): Promise<void> {
   await getPool().query(
     `INSERT INTO incident_events (incident_id, kind, message, data)
      VALUES ($1,$2,$3,$4)`,
-    [incidentId, kind, message, JSON.stringify(data)],
+    [incidentId, kind, message, JSON.stringify(data)]
   );
 }
 
@@ -121,14 +129,24 @@ async function handleAnomaly(anomaly: Anomaly): Promise<void> {
        VALUES ('INC-'||nextval('incident_seq'), $1, $2, $3, $4, $5, $6, $7, $8, now())
        ON CONFLICT (correlation_id) DO NOTHING
        RETURNING id`,
-      [title, IncidentStatus.DETECTED, severity, services, result.correlationId,
-       rootCauseJson, confidence, new Date(group.firstSeen).toISOString()],
+      [
+        title,
+        IncidentStatus.DETECTED,
+        severity,
+        services,
+        result.correlationId,
+        rootCauseJson,
+        confidence,
+        new Date(group.firstSeen).toISOString(),
+      ]
     );
     if (rows.length > 0) {
       const incidentId = rows[0]!.id;
       await persistAnomaly(anomaly, incidentId);
       await appendTimeline(incidentId, 'DETECTED', title, {
-        severity, score, trigger: anomaly.metric,
+        severity,
+        score,
+        trigger: anomaly.metric,
       });
       if (topCause) {
         await appendTimeline(incidentId, 'root_cause', topCause.title, {
@@ -145,11 +163,15 @@ async function handleAnomaly(anomaly: Anomaly): Promise<void> {
           service: 'incident-engine',
           correlationId: result.correlationId,
           payload: {
-            incidentId, title, severity, affectedServices: services,
-            confidence, rootCause: topCause?.title ?? null,
+            incidentId,
+            title,
+            severity,
+            affectedServices: services,
+            confidence,
+            rootCause: topCause?.title ?? null,
           },
         }),
-        incidentId,
+        incidentId
       );
       return;
     }
@@ -163,23 +185,31 @@ async function handleAnomaly(anomaly: Anomaly): Promise<void> {
             confidence = $4, updated_at = now()
       WHERE correlation_id = $5
       RETURNING id, status`,
-    [severity, services, rootCauseJson, confidence, result.correlationId],
+    [severity, services, rootCauseJson, confidence, result.correlationId]
   );
   if (rows.length === 0) return;
   const incidentId = rows[0]!.id;
   await persistAnomaly(anomaly, incidentId);
-  await appendTimeline(incidentId, 'anomaly_correlated',
+  await appendTimeline(
+    incidentId,
+    'anomaly_correlated',
     `${anomaly.metric} anomaly on ${anomaly.service}`,
-    { score: anomaly.anomalyScore, severity });
+    { score: anomaly.anomalyScore, severity }
+  );
   await producer.send(
     Topics.incident,
     makeEnvelope({
       type: EventType.INCIDENT_UPDATED,
       service: 'incident-engine',
       correlationId: result.correlationId,
-      payload: { incidentId, severity, affectedServices: services, anomalyCount: result.anomalyCount },
+      payload: {
+        incidentId,
+        severity,
+        affectedServices: services,
+        anomalyCount: result.anomalyCount,
+      },
     }),
-    incidentId,
+    incidentId
   );
 }
 
@@ -194,7 +224,7 @@ async function main(): Promise<void> {
 
   await consumer.run({
     topics: [Topics.anomaly],
-    handler: async (envelope) => {
+    handler: async envelope => {
       const parsed = AnomalySchema.safeParse(envelope.payload);
       if (!parsed.success) {
         throw new Error(`invalid anomaly payload: ${parsed.error.message}`);
@@ -215,7 +245,7 @@ async function main(): Promise<void> {
   process.on('SIGINT', () => void shutdown('SIGINT'));
 }
 
-main().catch((err) => {
+main().catch(err => {
   log.error({ err: (err as Error).message }, 'incident-engine failed');
   process.exit(1);
 });

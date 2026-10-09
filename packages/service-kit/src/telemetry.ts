@@ -19,18 +19,11 @@ export async function startTelemetry(serviceName: string): Promise<void> {
 
   try {
     const { NodeSDK } = await import('@opentelemetry/sdk-node');
-    const { getNodeAutoInstrumentations } = await import(
-      '@opentelemetry/auto-instrumentations-node'
-    );
-    const { OTLPTraceExporter } = await import(
-      '@opentelemetry/exporter-trace-otlp-http'
-    );
-    const { OTLPMetricExporter } = await import(
-      '@opentelemetry/exporter-metrics-otlp-http'
-    );
-    const { PeriodicExportingMetricReader } = await import(
-      '@opentelemetry/sdk-metrics'
-    );
+    const { getNodeAutoInstrumentations } =
+      await import('@opentelemetry/auto-instrumentations-node');
+    const { OTLPTraceExporter } = await import('@opentelemetry/exporter-trace-otlp-http');
+    const { OTLPMetricExporter } = await import('@opentelemetry/exporter-metrics-otlp-http');
+    const { PeriodicExportingMetricReader } = await import('@opentelemetry/sdk-metrics');
     const { Resource } = await import('@opentelemetry/resources');
 
     const resource = new Resource({
@@ -67,9 +60,7 @@ export async function startTelemetry(serviceName: string): Promise<void> {
     };
     console.log(`[otel] telemetry started for ${serviceName}`);
   } catch (err) {
-    console.warn(
-      `[otel] telemetry disabled for ${serviceName}: ${(err as Error).message}`,
-    );
+    console.warn(`[otel] telemetry disabled for ${serviceName}: ${(err as Error).message}`);
   }
 }
 

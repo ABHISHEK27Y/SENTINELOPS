@@ -1,4 +1,5 @@
 import { Kafka, type Consumer, type EachMessagePayload } from 'kafkajs';
+
 import { createLogger, type Logger } from '@sentinelops/logger';
 import {
   EventEnvelopeSchema,
@@ -6,12 +7,7 @@ import {
   type EventEnvelope,
   type TopicName,
 } from '@sentinelops/shared-types';
-import { createKafka } from './client.js';
-import { EventProducer } from './producer.js';
-import {
-  InMemoryIdempotencyStore,
-  type IdempotencyStore,
-} from './idempotency.js';
+
 import {
   backoffDelay,
   shouldRetry,
@@ -19,10 +15,13 @@ import {
   type BackoffOptions,
   DEFAULT_BACKOFF,
 } from './backoff.js';
+import { createKafka } from './client.js';
+import { InMemoryIdempotencyStore, type IdempotencyStore } from './idempotency.js';
+import { EventProducer } from './producer.js';
 
 export type EventHandler = (
   envelope: EventEnvelope,
-  ctx: { topic: string; partition: number; attempt: number },
+  ctx: { topic: string; partition: number; attempt: number }
 ) => Promise<void>;
 
 export interface EventConsumerOptions {
@@ -71,13 +70,13 @@ export class EventConsumer {
     this.log.info({ topics: params.topics, group: this.opts.groupId }, 'consumer running');
 
     await this.consumer.run({
-      eachMessage: (payload) => this.handleMessage(payload, params.handler),
+      eachMessage: payload => this.handleMessage(payload, params.handler),
     });
   }
 
   private async handleMessage(
     { topic, partition, message }: EachMessagePayload,
-    handler: EventHandler,
+    handler: EventHandler
   ): Promise<void> {
     const raw = message.value?.toString();
     if (!raw) return;
@@ -110,7 +109,7 @@ export class EventConsumer {
           const delay = backoffDelay(attempt, this.backoff);
           this.log.warn(
             { eventId: envelope.eventId, topic, attempt, delay, err: msg },
-            'handler failed, retrying',
+            'handler failed, retrying'
           );
           await sleep(delay);
           attempt += 1;
@@ -123,11 +122,7 @@ export class EventConsumer {
     }
   }
 
-  private async deadLetter(
-    originalTopic: string,
-    raw: string,
-    reason: string,
-  ): Promise<void> {
+  private async deadLetter(originalTopic: string, raw: string, reason: string): Promise<void> {
     this.log.error({ originalTopic, reason }, 'dead-lettering message');
     await this.dlq.send(Topics.deadletter, {
       eventId: crypto.randomUUID(),

@@ -11,7 +11,7 @@ export interface RetrievalResult {
   id: string;
   content: string;
   score: number;
-  metadata?: Record<string, unknown>;
+  metadata?: Record<string, unknown> | undefined;
 }
 
 /**
@@ -36,7 +36,7 @@ export class InMemoryRetriever {
   async search(query: string, k = 3): Promise<RetrievalResult[]> {
     const q = await this.embedder.embed(query);
     return this.chunks
-      .map((c) => ({
+      .map(c => ({
         id: c.id,
         content: c.content,
         score: cosineSimilarity(q, c.embedding),
@@ -50,8 +50,8 @@ export class InMemoryRetriever {
 /** Embed raw {id, content} chunks in one pass. */
 export async function embedChunks(
   embedder: Embedder,
-  raw: Array<{ id: string; content: string; metadata?: Record<string, unknown> }>,
+  raw: Array<{ id: string; content: string; metadata?: Record<string, unknown> }>
 ): Promise<EmbeddedChunk[]> {
-  const embeddings = await embedder.embedBatch(raw.map((r) => r.content));
+  const embeddings = await embedder.embedBatch(raw.map(r => r.content));
   return raw.map((r, i) => ({ ...r, embedding: embeddings[i]! }));
 }

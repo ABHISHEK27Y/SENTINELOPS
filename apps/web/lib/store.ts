@@ -15,7 +15,7 @@ interface AuthState {
   hydrate: () => void;
 }
 
-export const useAuth = create<AuthState>((set) => ({
+export const useAuth = create<AuthState>(set => ({
   token: null,
   user: null,
   setAuth: (token, user) => {

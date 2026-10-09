@@ -1,5 +1,4 @@
 import {
-  RemediationActionType,
   RemediationRisk,
   type RemediationActionType as ActionType,
   type RemediationRisk as Risk,
@@ -27,7 +26,7 @@ function action(
   type: ActionType,
   targetService: string,
   rationale: string,
-  params?: Record<string, unknown>,
+  params?: Record<string, unknown>
 ): ProposedAction {
   const risk = RISK[type];
   return {
@@ -36,7 +35,7 @@ function action(
     risk,
     rationale,
     requiresApproval: risk !== RemediationRisk.LOW,
-    params,
+    params: params ?? {},
   };
 }
 
@@ -64,32 +63,75 @@ export function recommendActions(input: RecommendInput): ProposedAction[] {
 
   if (dbSignal) {
     out.push(
-      action('increase_connection_pool', svc === 'postgres' ? affectedDbClient(input) : svc,
-        'DB connection pool is saturated; temporarily increasing the pool relieves pressure.'),
+      action(
+        'increase_connection_pool',
+        svc === 'postgres' ? affectedDbClient(input) : svc,
+        'DB connection pool is saturated; temporarily increasing the pool relieves pressure.'
+      )
     );
     if (input.hasRecentDeployment) {
-      out.push(action('rollback_deployment', primaryService(input),
-        'A deployment shortly preceded the incident; rolling back reverts a likely regression.'));
+      out.push(
+        action(
+          'rollback_deployment',
+          primaryService(input),
+          'A deployment shortly preceded the incident; rolling back reverts a likely regression.'
+        )
+      );
     }
-    out.push(action('restart_service', primaryService(input),
-      'Restarting resets leaked/held DB connections if the pool does not recover.'));
+    out.push(
+      action(
+        'restart_service',
+        primaryService(input),
+        'Restarting resets leaked/held DB connections if the pool does not recover.'
+      )
+    );
   } else if (cacheSignal) {
-    out.push(action('clear_cache', svc === 'redis' ? primaryService(input) : svc,
-      'Cache appears unhealthy; clearing corrupted keys can restore normal operation.'));
-    out.push(action('restart_service', svc === 'redis' ? primaryService(input) : svc,
-      'Restarting the cache-dependent service re-establishes connections.'));
+    out.push(
+      action(
+        'clear_cache',
+        svc === 'redis' ? primaryService(input) : svc,
+        'Cache appears unhealthy; clearing corrupted keys can restore normal operation.'
+      )
+    );
+    out.push(
+      action(
+        'restart_service',
+        svc === 'redis' ? primaryService(input) : svc,
+        'Restarting the cache-dependent service re-establishes connections.'
+      )
+    );
   } else if (resourceSignal) {
-    out.push(action('scale_service', primaryService(input),
-      'CPU/memory saturation; scaling out adds headroom.'));
-    out.push(action('restart_service', primaryService(input),
-      'Restarting clears a memory leak until a fix ships.'));
+    out.push(
+      action(
+        'scale_service',
+        primaryService(input),
+        'CPU/memory saturation; scaling out adds headroom.'
+      )
+    );
+    out.push(
+      action(
+        'restart_service',
+        primaryService(input),
+        'Restarting clears a memory leak until a fix ships.'
+      )
+    );
   } else {
     if (input.hasRecentDeployment) {
-      out.push(action('rollback_deployment', primaryService(input),
-        'A recent deployment correlates with the incident.'));
+      out.push(
+        action(
+          'rollback_deployment',
+          primaryService(input),
+          'A recent deployment correlates with the incident.'
+        )
+      );
     }
-    out.push(action('restart_service', primaryService(input),
-      'Restarting the unhealthy service is the safest general recovery step.'));
+    out.push(
+      action(
+        'restart_service',
+        primaryService(input),
+        'Restarting the unhealthy service is the safest general recovery step.'
+      )
+    );
   }
 
   return out;
@@ -105,7 +147,6 @@ function primaryService(input: RecommendInput): string {
 
 function affectedDbClient(input: RecommendInput): string {
   return (
-    input.affectedServices.find((s) => s !== 'postgres' && s !== 'redis') ??
-    input.rootCauseService
+    input.affectedServices.find(s => s !== 'postgres' && s !== 'redis') ?? input.rootCauseService
   );
 }

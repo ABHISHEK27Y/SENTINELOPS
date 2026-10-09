@@ -1,12 +1,8 @@
 import type { Registry } from 'prom-client';
+
 import { EventProducer } from '@sentinelops/kafka';
-import {
-  Topics,
-  EventType,
-  makeEnvelope,
-  type MetricSample,
-} from '@sentinelops/shared-types';
 import type { Logger } from '@sentinelops/logger';
+import { Topics, EventType, makeEnvelope, type MetricSample } from '@sentinelops/shared-types';
 
 /**
  * Publishes a snapshot of the service's own collected metrics to the
@@ -33,7 +29,7 @@ export class TelemetryPublisher {
     private producer: EventProducer,
     private serviceName: string,
     private registry: Registry,
-    private log: Logger,
+    private log: Logger
   ) {}
 
   start(intervalMs = 5000): void {
@@ -59,8 +55,8 @@ export class TelemetryPublisher {
           // prom-client tags histogram sub-values with metricName (_sum/_count),
           // but the exported type omits it — narrow locally.
           const named = m.values as Array<{ metricName?: string; value: number }>;
-          const sum = named.find((x) => x.metricName?.endsWith('_sum'));
-          const count = named.find((x) => x.metricName?.endsWith('_count'));
+          const sum = named.find(x => x.metricName?.endsWith('_sum'));
+          const count = named.find(x => x.metricName?.endsWith('_count'));
           if (sum && count && count.value > 0) {
             samples.push({
               metric: m.name,
@@ -79,7 +75,7 @@ export class TelemetryPublisher {
           type: EventType.TELEMETRY_SAMPLE,
           service: this.serviceName,
           payload: { samples },
-        }),
+        })
       );
     } catch (err) {
       this.log.debug({ err: (err as Error).message }, 'telemetry publish tick failed');

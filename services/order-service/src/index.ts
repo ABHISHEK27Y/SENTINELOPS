@@ -1,6 +1,6 @@
 import { startTelemetry, stopTelemetry } from '@sentinelops/service-kit/telemetry';
 
-const PORT = Number(process.env.ORDER_SERVICE_PORT ?? 8082);
+const PORT = Number(process.env['ORDER_SERVICE_PORT'] ?? 8082);
 
 await startTelemetry('order-service');
 const { buildOrderService } = await import('./app.js');

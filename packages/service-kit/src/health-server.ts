@@ -1,4 +1,5 @@
 import http from 'node:http';
+
 import type { Registry } from 'prom-client';
 
 /**
@@ -45,11 +46,10 @@ export function startHealthServer(opts: {
     res.end();
   });
 
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     server.listen(port, '0.0.0.0', () => {
       resolve({
-        close: () =>
-          new Promise<void>((r) => server.close(() => r())),
+        close: () => new Promise<void>(r => server.close(() => r())),
       });
     });
   });

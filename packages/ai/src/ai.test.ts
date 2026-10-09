@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { MockProvider } from './provider.js';
+
 import { buildInvestigation, type InvestigationContext } from './investigator.js';
 import { buildPostmortem } from './postmortem.js';
+import { MockProvider } from './provider.js';
 
 const ctx: InvestigationContext = {
   incidentId: 'INC-1042',
@@ -9,14 +10,44 @@ const ctx: InvestigationContext = {
   affectedServices: ['postgres', 'payment-service', 'order-service'],
   startedAt: '2026-09-22T10:31:00.000Z',
   anomalies: [
-    { service: 'postgres', metric: 'db_query_latency_ms', value: 2500, baseline: 100, anomalyScore: 0.92, at: '2026-09-22T10:31:05.000Z' },
-    { service: 'payment-service', metric: 'request_latency_ms', value: 2800, baseline: 180, anomalyScore: 0.88, at: '2026-09-22T10:31:09.000Z' },
-    { service: 'payment-service', metric: 'error_rate', value: 0.17, baseline: 0.003, anomalyScore: 0.8, at: '2026-09-22T10:31:12.000Z' },
+    {
+      service: 'postgres',
+      metric: 'db_query_latency_ms',
+      value: 2500,
+      baseline: 100,
+      anomalyScore: 0.92,
+      at: '2026-09-22T10:31:05.000Z',
+    },
+    {
+      service: 'payment-service',
+      metric: 'request_latency_ms',
+      value: 2800,
+      baseline: 180,
+      anomalyScore: 0.88,
+      at: '2026-09-22T10:31:09.000Z',
+    },
+    {
+      service: 'payment-service',
+      metric: 'error_rate',
+      value: 0.17,
+      baseline: 0.003,
+      anomalyScore: 0.8,
+      at: '2026-09-22T10:31:12.000Z',
+    },
   ],
-  rootCause: { title: 'postgres is the probable root cause', confidence: 0.9, evidence: ['2 affected services depend on postgres'] },
+  rootCause: {
+    title: 'postgres is the probable root cause',
+    confidence: 0.9,
+    evidence: ['2 affected services depend on postgres'],
+  },
   runbooks: [{ title: 'Database Troubleshooting', snippet: 'increase pool size' }],
   recommendedActions: [
-    { type: 'increase_connection_pool', targetService: 'payment-service', risk: 'LOW', rationale: 'relieve pool pressure' },
+    {
+      type: 'increase_connection_pool',
+      targetService: 'payment-service',
+      risk: 'LOW',
+      rationale: 'relieve pool pressure',
+    },
   ],
 };
 
@@ -52,7 +83,13 @@ describe('buildPostmortem', () => {
       resolvedAt: '2026-09-22T10:38:00.000Z',
       affectedServices: ctx.affectedServices,
       investigation: inv,
-      remediation: [{ action: 'increase_connection_pool on payment-service', approvedBy: 'engineer@x', result: 'ok' }],
+      remediation: [
+        {
+          action: 'increase_connection_pool on payment-service',
+          approvedBy: 'engineer@x',
+          result: 'ok',
+        },
+      ],
       timeline: [{ at: ctx.startedAt, message: 'incident detected' }],
     });
     expect(md).toContain('# Postmortem: Payment degradation');

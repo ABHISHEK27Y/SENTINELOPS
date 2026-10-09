@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+
 import { computeSeverity, DEFAULT_SEVERITY_RULES } from './severity.js';
 
 describe('computeSeverity', () => {

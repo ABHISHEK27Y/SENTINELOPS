@@ -20,12 +20,7 @@ export class RedisIdempotencyStore implements IdempotencyStore {
   private ttlSeconds: number;
   private prefix: string;
 
-  constructor(opts: {
-    url: string;
-    ttlSeconds?: number;
-    prefix?: string;
-    redis?: Redis;
-  }) {
+  constructor(opts: { url: string; ttlSeconds?: number; prefix?: string; redis?: Redis }) {
     this.redis = opts.redis ?? new Redis(opts.url, { lazyConnect: false });
     this.ttlSeconds = opts.ttlSeconds ?? 6 * 60 * 60; // 6h
     this.prefix = opts.prefix ?? 'idem';

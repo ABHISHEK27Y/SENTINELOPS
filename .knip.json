@@ -17,15 +17,6 @@
       "project": ["package.json", "tsconfig.json", "tsconfig.base.json"]
     }
   },
-  "ignore": [
-    "@sentinelops/*",
-    "eslint-plugin-import",
-    "knip",
-    "prettier"
-  ],
-  "ignoreDependencies": [
-    "@types/node",
-    "typescript",
-    "vitest"
-  ]
+  "ignore": ["eslint-plugin-import", "knip", "prettier"],
+  "ignoreDependencies": ["@types/node", "typescript", "vitest", "@vitest/coverage-v8", "recharts"]
 }

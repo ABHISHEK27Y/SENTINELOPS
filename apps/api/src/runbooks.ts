@@ -1,16 +1,12 @@
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import {
-  chunkMarkdown,
-  embedChunks,
-  getEmbedder,
-  InMemoryRetriever,
-} from '@sentinelops/rag';
+import { fileURLToPath } from 'node:url';
+
+import { chunkMarkdown, embedChunks, getEmbedder, InMemoryRetriever } from '@sentinelops/rag';
 
 /** Resolve docs/runbooks relative to the repo root (or RUNBOOKS_DIR override). */
 function runbooksDir(): string {
-  if (process.env.RUNBOOKS_DIR) return process.env.RUNBOOKS_DIR;
+  if (process.env['RUNBOOKS_DIR']) return process.env['RUNBOOKS_DIR'];
   const here = path.dirname(fileURLToPath(import.meta.url));
   // apps/api/src → repo root is three levels up.
   return path.resolve(here, '../../../docs/runbooks');
@@ -28,7 +24,7 @@ export async function buildRunbookRetriever(): Promise<InMemoryRetriever> {
   if (!existsSync(dir)) return retriever;
 
   const raw: Array<{ id: string; content: string; metadata: Record<string, unknown> }> = [];
-  for (const file of readdirSync(dir).filter((f) => f.endsWith('.md'))) {
+  for (const file of readdirSync(dir).filter(f => f.endsWith('.md'))) {
     const md = readFileSync(path.join(dir, file), 'utf8');
     const title = file.replace(/\.md$/, '').replace(/-/g, ' ');
     for (const chunk of chunkMarkdown(md)) {

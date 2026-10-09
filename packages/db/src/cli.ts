@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-import { closePool } from './pool.js';
 import { status, up, migrationsDir } from './migrate.js';
+import { closePool } from './pool.js';
 
 /**
  * Migration CLI.
@@ -15,7 +15,7 @@ async function main(): Promise<void> {
       console.log(
         applied.length
           ? `Applied ${applied.length} migration(s): ${applied.join(', ')}`
-          : 'Database is up to date.',
+          : 'Database is up to date.'
       );
       break;
     }
@@ -33,7 +33,7 @@ async function main(): Promise<void> {
 }
 
 main()
-  .catch((err) => {
+  .catch(err => {
     console.error(err);
     process.exitCode = 1;
   })

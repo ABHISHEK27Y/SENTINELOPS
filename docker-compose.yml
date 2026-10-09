@@ -21,7 +21,7 @@ x-app: &app
     DATABASE_URL: postgresql://sentinel:sentinel_dev_pw@postgres:5432/sentinelops
     REDIS_URL: redis://redis:6379
     KAFKA_BROKERS: kafka:29092
-    KAFKA_TELEMETRY: "on"
+    KAFKA_TELEMETRY: 'on'
   depends_on:
     postgres:
       condition: service_healthy
@@ -34,14 +34,14 @@ services:
   user-service:
     <<: *app
     container_name: sentinel-user
-    command: ["npm", "run", "start", "-w", "@sentinelops/user-service"]
+    command: ['npm', 'run', 'start', '-w', '@sentinelops/user-service']
     environment:
       <<: *app-env
-      USER_SERVICE_PORT: "8081"
+      USER_SERVICE_PORT: '8081'
     ports:
-      - "8081:8081"
+      - '8081:8081'
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:8081/health/live"]
+      test: ['CMD', 'curl', '-fsS', 'http://localhost:8081/health/live']
       interval: 10s
       timeout: 3s
       retries: 10
@@ -49,14 +49,14 @@ services:
   payment-service:
     <<: *app
     container_name: sentinel-payment
-    command: ["npm", "run", "start", "-w", "@sentinelops/payment-service"]
+    command: ['npm', 'run', 'start', '-w', '@sentinelops/payment-service']
     environment:
       <<: *app-env
-      PAYMENT_SERVICE_PORT: "8083"
+      PAYMENT_SERVICE_PORT: '8083'
     ports:
-      - "8083:8083"
+      - '8083:8083'
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:8083/health/live"]
+      test: ['CMD', 'curl', '-fsS', 'http://localhost:8083/health/live']
       interval: 10s
       timeout: 3s
       retries: 10
@@ -64,14 +64,14 @@ services:
   notification-service:
     <<: *app
     container_name: sentinel-notification
-    command: ["npm", "run", "start", "-w", "@sentinelops/notification-service"]
+    command: ['npm', 'run', 'start', '-w', '@sentinelops/notification-service']
     environment:
       <<: *app-env
-      NOTIFICATION_SERVICE_PORT: "8084"
+      NOTIFICATION_SERVICE_PORT: '8084'
     ports:
-      - "8084:8084"
+      - '8084:8084'
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:8084/health/live"]
+      test: ['CMD', 'curl', '-fsS', 'http://localhost:8084/health/live']
       interval: 10s
       timeout: 3s
       retries: 10
@@ -79,14 +79,14 @@ services:
   order-service:
     <<: *app
     container_name: sentinel-order
-    command: ["npm", "run", "start", "-w", "@sentinelops/order-service"]
+    command: ['npm', 'run', 'start', '-w', '@sentinelops/order-service']
     environment:
       <<: *app-env
-      ORDER_SERVICE_PORT: "8082"
+      ORDER_SERVICE_PORT: '8082'
       PAYMENT_SERVICE_URL: http://payment-service:8083
       NOTIFICATION_SERVICE_URL: http://notification-service:8084
     ports:
-      - "8082:8082"
+      - '8082:8082'
     depends_on:
       postgres:
         condition: service_healthy
@@ -99,7 +99,7 @@ services:
       notification-service:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:8082/health/live"]
+      test: ['CMD', 'curl', '-fsS', 'http://localhost:8082/health/live']
       interval: 10s
       timeout: 3s
       retries: 10
@@ -107,21 +107,21 @@ services:
   api-gateway:
     <<: *app
     container_name: sentinel-gateway
-    command: ["npm", "run", "start", "-w", "@sentinelops/api-gateway"]
+    command: ['npm', 'run', 'start', '-w', '@sentinelops/api-gateway']
     environment:
       <<: *app-env
-      API_GATEWAY_PORT: "8080"
+      API_GATEWAY_PORT: '8080'
       USER_SERVICE_URL: http://user-service:8081
       ORDER_SERVICE_URL: http://order-service:8082
     ports:
-      - "8080:8080"
+      - '8080:8080'
     depends_on:
       user-service:
         condition: service_healthy
       order-service:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:8080/health/live"]
+      test: ['CMD', 'curl', '-fsS', 'http://localhost:8080/health/live']
       interval: 10s
       timeout: 3s
       retries: 10
@@ -130,11 +130,11 @@ services:
   loadgen:
     <<: *app
     container_name: sentinel-loadgen
-    command: ["npm", "run", "start", "-w", "@sentinelops/loadgen"]
+    command: ['npm', 'run', 'start', '-w', '@sentinelops/loadgen']
     environment:
       GATEWAY_URL: http://api-gateway:8080
-      TARGET_RPS: "8"
-      ORDER_RATIO: "0.6"
+      TARGET_RPS: '8'
+      ORDER_RATIO: '0.6'
     depends_on:
       api-gateway:
         condition: service_healthy
@@ -147,8 +147,8 @@ services:
   migrate:
     <<: *app
     container_name: sentinel-migrate
-    command: ["npm", "run", "db:migrate"]
-    restart: "no"
+    command: ['npm', 'run', 'db:migrate']
+    restart: 'no'
     depends_on:
       postgres:
         condition: service_healthy
@@ -158,14 +158,14 @@ services:
   anomaly-engine:
     <<: *app
     container_name: sentinel-anomaly
-    command: ["npm", "run", "start", "-w", "@sentinelops/anomaly-engine"]
+    command: ['npm', 'run', 'start', '-w', '@sentinelops/anomaly-engine']
     environment:
       <<: *app-env
-      ANOMALY_ENGINE_PORT: "8091"
+      ANOMALY_ENGINE_PORT: '8091'
     ports:
-      - "8091:8091"
+      - '8091:8091'
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:8091/health/live"]
+      test: ['CMD', 'curl', '-fsS', 'http://localhost:8091/health/live']
       interval: 10s
       timeout: 3s
       retries: 10
@@ -173,12 +173,12 @@ services:
   incident-engine:
     <<: *app
     container_name: sentinel-incident
-    command: ["npm", "run", "start", "-w", "@sentinelops/incident-engine"]
+    command: ['npm', 'run', 'start', '-w', '@sentinelops/incident-engine']
     environment:
       <<: *app-env
-      INCIDENT_ENGINE_PORT: "8090"
+      INCIDENT_ENGINE_PORT: '8090'
     ports:
-      - "8090:8090"
+      - '8090:8090'
     depends_on:
       postgres:
         condition: service_healthy
@@ -189,7 +189,7 @@ services:
       migrate:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:8090/health/live"]
+      test: ['CMD', 'curl', '-fsS', 'http://localhost:8090/health/live']
       interval: 10s
       timeout: 3s
       retries: 10
@@ -198,7 +198,7 @@ services:
   event-tap:
     <<: *app
     container_name: sentinel-eventtap
-    command: ["npm", "run", "start", "-w", "@sentinelops/event-tap"]
+    command: ['npm', 'run', 'start', '-w', '@sentinelops/event-tap']
     healthcheck:
       disable: true
 
@@ -206,12 +206,12 @@ services:
   ingestor:
     <<: *app
     container_name: sentinel-ingestor
-    command: ["npm", "run", "start", "-w", "@sentinelops/ingestor"]
+    command: ['npm', 'run', 'start', '-w', '@sentinelops/ingestor']
     environment:
       <<: *app-env
-      INGESTOR_PORT: "8095"
+      INGESTOR_PORT: '8095'
     ports:
-      - "8095:8095"
+      - '8095:8095'
     depends_on:
       postgres:
         condition: service_healthy
@@ -220,7 +220,7 @@ services:
       migrate:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:8095/health/live"]
+      test: ['CMD', 'curl', '-fsS', 'http://localhost:8095/health/live']
       interval: 10s
       timeout: 3s
       retries: 10
@@ -229,12 +229,12 @@ services:
   api:
     <<: *app
     container_name: sentinel-api
-    command: ["npm", "run", "start", "-w", "@sentinelops/api"]
+    command: ['npm', 'run', 'start', '-w', '@sentinelops/api']
     environment:
       <<: *app-env
-      API_PORT: "4000"
+      API_PORT: '4000'
     ports:
-      - "4000:4000"
+      - '4000:4000'
     depends_on:
       postgres:
         condition: service_healthy
@@ -245,7 +245,7 @@ services:
       migrate:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:4000/api/health"]
+      test: ['CMD', 'curl', '-fsS', 'http://localhost:4000/api/health']
       interval: 10s
       timeout: 3s
       retries: 10
@@ -254,13 +254,13 @@ services:
   web:
     <<: *app
     container_name: sentinel-web
-    command: ["npm", "run", "dev", "-w", "@sentinelops/web"]
+    command: ['npm', 'run', 'dev', '-w', '@sentinelops/web']
     environment:
       NODE_ENV: development
       NEXT_PUBLIC_API_URL: http://localhost:4000
       NEXT_PUBLIC_WS_URL: ws://localhost:4000/ws
     ports:
-      - "3000:3000"
+      - '3000:3000'
     depends_on:
       api:
         condition: service_healthy

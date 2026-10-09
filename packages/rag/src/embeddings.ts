@@ -39,11 +39,11 @@ export class MockEmbedder implements Embedder {
       v[idx]! += sign;
     }
     const norm = Math.sqrt(v.reduce((s, x) => s + x * x, 0)) || 1;
-    return v.map((x) => x / norm);
+    return v.map(x => x / norm);
   }
 
   async embedBatch(texts: string[]): Promise<number[][]> {
-    return Promise.all(texts.map((t) => this.embed(t)));
+    return Promise.all(texts.map(t => this.embed(t)));
   }
 }
 

@@ -1,9 +1,7 @@
 'use client';
 
-export const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
-export const WS_URL =
-  process.env.NEXT_PUBLIC_WS_URL ?? 'ws://localhost:4000/ws';
+export const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:4000';
+export const WS_URL = process.env['NEXT_PUBLIC_WS_URL'] ?? 'ws://localhost:4000/ws';
 
 function token(): string | null {
   try {
@@ -13,10 +11,7 @@ function token(): string | null {
   }
 }
 
-export async function apiFetch<T = unknown>(
-  path: string,
-  opts: RequestInit = {},
-): Promise<T> {
+export async function apiFetch<T = unknown>(path: string, opts: RequestInit = {}): Promise<T> {
   const t = token();
   const res = await fetch(`${API_URL}${path}`, {
     ...opts,

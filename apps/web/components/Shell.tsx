@@ -42,17 +42,21 @@ export function Shell({ children }: { children: ReactNode }) {
           <div className="text-[10px] text-muted uppercase tracking-widest">SRE Console</div>
         </div>
         <nav className="flex-1 py-2">
-          {NAV.map((n) => {
+          {NAV.map(n => {
             const active = pathname.startsWith(n.href);
             return (
               <Link
                 key={n.href}
                 href={n.href}
                 className={`flex items-center gap-2 px-4 py-2 text-sm ${
-                  active ? 'bg-panel2 text-text border-l-2 border-accent' : 'text-muted hover:text-text'
+                  active
+                    ? 'bg-panel2 text-text border-l-2 border-accent'
+                    : 'text-muted hover:text-text'
                 }`}
               >
-                <span aria-hidden className="w-4 text-center">{n.icon}</span>
+                <span aria-hidden className="w-4 text-center">
+                  {n.icon}
+                </span>
                 {n.label}
               </Link>
             );
@@ -61,7 +65,13 @@ export function Shell({ children }: { children: ReactNode }) {
         <div className="px-4 py-3 border-t border-border text-xs">
           <div className="text-text">{user?.name}</div>
           <div className="text-muted">{user?.role}</div>
-          <button className="btn mt-2 w-full" onClick={() => { logout(); router.replace('/login'); }}>
+          <button
+            className="btn mt-2 w-full"
+            onClick={() => {
+              logout();
+              router.replace('/login');
+            }}
+          >
             Sign out
           </button>
         </div>
