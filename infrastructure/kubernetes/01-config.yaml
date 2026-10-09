@@ -1,6 +1,43 @@
 # Shared configuration + secrets for all SentinelOps pods.
-# In production, source the Secret from an external manager (AWS Secrets Manager /
-# External Secrets Operator) rather than committing it.
+# ⚠️ PRODUCTION: DO NOT COMMIT REAL SECRETS!
+# Use External Secrets Operator (https://external-secrets.io/) to sync from:
+#   - AWS Secrets Manager
+#   - HashiCorp Vault
+#   - Azure Key Vault
+#   - GCP Secret Manager
+#   - Kubernetes ClusterSecretStore
+#
+# Example ExternalSecret resource (apply separately):
+# apiVersion: external-secrets.io/v1beta1
+# kind: ExternalSecret
+# metadata:
+#   name: sentinelops-secrets
+#   namespace: sentinelops
+# spec:
+#   refreshInterval: 1h
+#   secretStoreRef:
+#     name: aws-secrets-manager
+#     kind: ClusterSecretStore
+#   target:
+#     name: sentinelops-secrets
+#     creationPolicy: Owner
+#   data:
+#     - secretKey: DATABASE_URL
+#       remoteRef:
+#         key: sentinelops/production/database-url
+#     - secretKey: REDIS_URL
+#       remoteRef:
+#         key: sentinelops/production/redis-url
+#     - secretKey: JWT_SECRET
+#       remoteRef:
+#         key: sentinelops/production/jwt-secret
+#     - secretKey: ANTHROPIC_API_KEY
+#       remoteRef:
+#         key: sentinelops/production/anthropic-api-key
+#     - secretKey: OPENAI_API_KEY
+#       remoteRef:
+#         key: sentinelops/production/openai-api-key
+
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -11,6 +48,9 @@ data:
   LOG_LEVEL: "info"
   OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
   OTEL_SERVICE_NAMESPACE: "sentinelops"
+  # Trace sampling: 10% in production (parentbased_traceidratio)
+  OTEL_TRACES_SAMPLER: "parentbased_traceidratio"
+  OTEL_TRACES_SAMPLER_ARG: "0.1"
   KAFKA_BROKERS: "kafka:9092"
   KAFKA_TELEMETRY: "on"
   PROMETHEUS_URL: "http://prometheus:9090"
@@ -24,9 +64,14 @@ metadata:
   namespace: sentinelops
 type: Opaque
 stringData:
-  DATABASE_URL: "postgresql://sentinel:sentinel_dev_pw@postgres:5432/sentinelops"
+  # ⚠️ PLACEHOLDER VALUES - REPLACE WITH EXTERNAL SECRETS IN PRODUCTION
+  DATABASE_URL: "postgresql://sentinel:CHANGE_ME@postgres:5432/sentinelops"
   REDIS_URL: "redis://redis:6379"
-  JWT_SECRET: "change_me_in_production"
+  JWT_SECRET: "CHANGE_ME_IN_PRODUCTION_USE_EXTERNAL_SECRETS"
   POSTGRES_USER: "sentinel"
-  POSTGRES_PASSWORD: "sentinel_dev_pw"
+  POSTGRES_PASSWORD: "CHANGE_ME"
   POSTGRES_DB: "sentinelops"
+  # LLM API keys (optional, for AI features)
+  ANTHROPIC_API_KEY: ""
+  OPENAI_API_KEY: ""
+  OPENAI_BASE_URL: ""

@@ -21,6 +21,13 @@ spec:
           envFrom:
             - configMapRef: { name: sentinelops-config }
             - secretRef: { name: sentinelops-secrets }
+          resources:
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
 ---
 # ── Data-plane services ─────────────────────────────────────────────────
 apiVersion: apps/v1
@@ -42,6 +49,13 @@ spec:
           ports: [{ containerPort: 8083 }]
           readinessProbe: { httpGet: { path: /health/ready, port: 8083 }, initialDelaySeconds: 8, periodSeconds: 10 }
           livenessProbe: { httpGet: { path: /health/live, port: 8083 }, initialDelaySeconds: 15, periodSeconds: 15 }
+          resources:
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
 ---
 apiVersion: v1
 kind: Service
@@ -67,6 +81,13 @@ spec:
           ports: [{ containerPort: 8084 }]
           readinessProbe: { httpGet: { path: /health/ready, port: 8084 }, initialDelaySeconds: 8, periodSeconds: 10 }
           livenessProbe: { httpGet: { path: /health/live, port: 8084 }, initialDelaySeconds: 15, periodSeconds: 15 }
+          resources:
+            limits:
+              memory: "256Mi"
+              cpu: "300m"
+            requests:
+              memory: "128Mi"
+              cpu: "150m"
 ---
 apiVersion: v1
 kind: Service
@@ -92,6 +113,13 @@ spec:
           ports: [{ containerPort: 8081 }]
           readinessProbe: { httpGet: { path: /health/ready, port: 8081 }, initialDelaySeconds: 8, periodSeconds: 10 }
           livenessProbe: { httpGet: { path: /health/live, port: 8081 }, initialDelaySeconds: 15, periodSeconds: 15 }
+          resources:
+            limits:
+              memory: "256Mi"
+              cpu: "300m"
+            requests:
+              memory: "128Mi"
+              cpu: "150m"
 ---
 apiVersion: v1
 kind: Service
@@ -120,6 +148,13 @@ spec:
           ports: [{ containerPort: 8082 }]
           readinessProbe: { httpGet: { path: /health/ready, port: 8082 }, initialDelaySeconds: 8, periodSeconds: 10 }
           livenessProbe: { httpGet: { path: /health/live, port: 8082 }, initialDelaySeconds: 15, periodSeconds: 15 }
+          resources:
+            limits:
+              memory: "256Mi"
+              cpu: "300m"
+            requests:
+              memory: "128Mi"
+              cpu: "150m"
 ---
 apiVersion: v1
 kind: Service
@@ -148,6 +183,13 @@ spec:
           ports: [{ containerPort: 8080 }]
           readinessProbe: { httpGet: { path: /health/ready, port: 8080 }, initialDelaySeconds: 8, periodSeconds: 10 }
           livenessProbe: { httpGet: { path: /health/live, port: 8080 }, initialDelaySeconds: 15, periodSeconds: 15 }
+          resources:
+            limits:
+              memory: "256Mi"
+              cpu: "300m"
+            requests:
+              memory: "128Mi"
+              cpu: "150m"
 ---
 apiVersion: v1
 kind: Service
@@ -173,6 +215,13 @@ spec:
           env: [{ name: ANOMALY_ENGINE_PORT, value: "8091" }]
           ports: [{ containerPort: 8091 }]
           readinessProbe: { httpGet: { path: /health/ready, port: 8091 }, initialDelaySeconds: 10, periodSeconds: 10 }
+          resources:
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
 ---
 apiVersion: v1
 kind: Service
@@ -197,6 +246,13 @@ spec:
           env: [{ name: INCIDENT_ENGINE_PORT, value: "8090" }]
           ports: [{ containerPort: 8090 }]
           readinessProbe: { httpGet: { path: /health/ready, port: 8090 }, initialDelaySeconds: 10, periodSeconds: 10 }
+          resources:
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
 ---
 apiVersion: v1
 kind: Service
@@ -221,6 +277,13 @@ spec:
           env: [{ name: INGESTOR_PORT, value: "8095" }]
           ports: [{ containerPort: 8095 }]
           readinessProbe: { httpGet: { path: /health/ready, port: 8095 }, initialDelaySeconds: 10, periodSeconds: 10 }
+          resources:
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
 ---
 apiVersion: v1
 kind: Service
@@ -246,6 +309,13 @@ spec:
           env: [{ name: API_PORT, value: "4000" }]
           ports: [{ containerPort: 4000 }]
           readinessProbe: { httpGet: { path: /api/health, port: 4000 }, initialDelaySeconds: 10, periodSeconds: 10 }
+          resources:
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
 ---
 apiVersion: v1
 kind: Service

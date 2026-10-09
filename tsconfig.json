@@ -21,6 +21,7 @@
   "include": [
     "packages/*/src/**/*.ts",
     "services/*/src/**/*.ts",
+    "control-plane/*/src/**/*.ts",
     "apps/api/src/**/*.ts",
     "apps/web/**/*.ts"
   ],

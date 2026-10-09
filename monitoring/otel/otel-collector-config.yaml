@@ -1,5 +1,5 @@
 # OpenTelemetry Collector — receives OTLP from all services, exports traces to
-# Jaeger and metrics to a Prometheus-scrapeable endpoint.
+# Jaeger and metrics to a Prometheus-scrapeable endpoint with exemplars.
 receivers:
   otlp:
     protocols:
@@ -15,6 +15,12 @@ processors:
     check_interval: 2s
     limit_percentage: 80
     spike_limit_percentage: 20
+  # Add resource attributes for better correlation
+  resource:
+    attributes:
+      - key: service.namespace
+        value: "sentinelops"
+        action: insert
 
 exporters:
   # Traces → Jaeger (OTLP gRPC on the jaeger container).
@@ -22,11 +28,22 @@ exporters:
     endpoint: jaeger:4317
     tls:
       insecure: true
-  # Metrics → Prometheus exposition on :8889.
+  # Metrics → Prometheus exposition on :8889 WITH EXEMPLARS.
   prometheus:
     endpoint: 0.0.0.0:8889
     resource_to_telemetry_conversion:
       enabled: true
+    # Enable exemplars for metric-to-trace correlation
+    exemplars:
+      enabled: true
+  # Logs → Loki for log aggregation
+  loki:
+    endpoint: http://loki:3100/api/v1/push
+    tenant_id: "sentinelops"
+    labels:
+      resource:
+        service.name:
+        service.namespace:
   # Logs → collector stdout (viewable via docker logs) for the demo.
   debug:
     verbosity: normal
@@ -35,13 +52,13 @@ service:
   pipelines:
     traces:
       receivers: [otlp]
-      processors: [memory_limiter, batch]
+      processors: [memory_limiter, batch, resource]
       exporters: [otlp/jaeger]
     metrics:
       receivers: [otlp]
-      processors: [memory_limiter, batch]
+      processors: [memory_limiter, batch, resource]
       exporters: [prometheus]
     logs:
       receivers: [otlp]
-      processors: [memory_limiter, batch]
-      exporters: [debug]
+      processors: [memory_limiter, batch, resource]
+      exporters: [loki, debug]

@@ -1,0 +1,211 @@
+# SentinelOps Prometheus Alerting Rules
+# These define SLI-based alerts for the platform
+
+groups:
+  - name: sentinelops.infrastructure
+    interval: 30s
+    rules:
+      # Database
+      - alert: PostgresDown
+        expr: up{job="postgres"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL is down"
+          description: "PostgreSQL has been down for more than 1 minute"
+
+      - alert: PostgresHighConnections
+        expr: pg_stat_database_numbackends / pg_settings_max_connections > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "PostgreSQL connection pool near exhaustion"
+          description: "Connection usage is above 80%"
+
+      # Redis
+      - alert: RedisDown
+        expr: up{job="redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis is down"
+          description: "Redis has been down for more than 1 minute"
+
+      - alert: RedisHighMemory
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis memory usage high"
+          description: "Redis memory usage is above 90%"
+
+      # Kafka
+      - alert: KafkaDown
+        expr: up{job="kafka"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Kafka broker is down"
+          description: "Kafka broker has been down for more than 1 minute"
+
+      - alert: KafkaHighConsumerLag
+        expr: kafka_consumer_lag > 10000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Kafka consumer lag high"
+          description: "Consumer lag exceeds 10k messages"
+
+  - name: sentinelops.services
+    interval: 30s
+    rules:
+      # Data-plane services
+      - alert: ServiceDown
+        expr: up{job="sentinelops-services"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service {{ $labels.instance }} is down"
+          description: "{{ $labels.job }} service {{ $labels.instance }} has been down for 2 minutes"
+
+      - alert: ServiceHighErrorRate
+        expr: |
+          sum(rate(http_requests_total{job="sentinelops-services",status=~"5.."}[5m])) by (service, instance)
+          /
+          sum(rate(http_requests_total{job="sentinelops-services"}[5m])) by (service, instance)
+          > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High error rate on {{ $labels.service }} ({{ $labels.instance }})"
+          description: "Error rate exceeds 5% for 5 minutes"
+
+      - alert: ServiceHighLatency
+        expr: |
+          histogram_quantile(0.95, sum(rate(http_request_duration_ms_bucket{job="sentinelops-services"}[5m])) by (le, service, instance)) > 2000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High p95 latency on {{ $labels.service }} ({{ $labels.instance }})"
+          description: "p95 latency exceeds 2 seconds for 5 minutes"
+
+      - alert: ServiceHighDbPoolUtilization
+        expr: db_pool_utilization{job="sentinelops-services"} > 0.85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "DB pool utilization high on {{ $labels.service }}"
+          description: "Database connection pool utilization exceeds 85%"
+
+      - alert: ServiceHighMemoryUsage
+        expr: memory_usage{job="sentinelops-services"} > 500000000
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage on {{ $labels.service }}"
+          description: "Memory usage exceeds 500MB for 10 minutes"
+
+      # Control plane
+      - alert: ControlPlaneServiceDown
+        expr: up{job="sentinelops-control-plane"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Control plane service {{ $labels.instance }} is down"
+          description: "Control plane service {{ $labels.instance }} has been down for 2 minutes"
+
+      - alert: IncidentEngineHighOpenGroups
+        expr: open_correlation_groups{job="sentinelops-control-plane"} > 50
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High number of open correlation groups"
+          description: "Incident engine has more than 50 open correlation groups"
+
+      - alert: AnomalyEngineNoAnomalies
+        expr: rate(anomalies_emitted_total{job="sentinelops-control-plane"}[10m]) == 0
+        for: 10m
+        labels:
+          severity: info
+        annotations:
+          summary: "No anomalies detected recently"
+          description: "Anomaly engine hasn't emitted any anomalies in 10 minutes"
+
+  - name: sentinelops.platform
+    interval: 30s
+    rules:
+      - alert: APIDown
+        expr: up{job="sentinelops-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Platform API is down"
+          description: "The platform API has been down for more than 1 minute"
+
+      - alert: APIHighErrorRate
+        expr: |
+          sum(rate(http_requests_total{job="sentinelops-api",status=~"5.."}[5m]))
+          /
+          sum(rate(http_requests_total{job="sentinelops-api"}[5m]))
+          > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Platform API high error rate"
+          description: "Platform API error rate exceeds 5%"
+
+  - name: sentinelops.observability
+    interval: 30s
+    rules:
+      - alert: PrometheusDown
+        expr: up{job="prometheus"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Prometheus is down"
+          description: "Prometheus has been down for more than 1 minute"
+
+      - alert: PrometheusHighScrapeFailures
+        expr: |
+          sum(rate(prometheus_target_scrapes_sample_limit_exceeded_total[5m])) by (job)
+          > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Prometheus scrape sample limit exceeded"
+          description: "Prometheus scrape for {{ $labels.job }} is hitting sample limits"
+
+      - alert: OTelCollectorDown
+        expr: up{job="otel-collector"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "OTel Collector is down"
+          description: "OpenTelemetry Collector has been down for more than 1 minute"
+
+      - alert: LokiDown
+        expr: up{job="loki"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Loki is down"
+          description: "Loki log aggregation has been down for more than 1 minute"

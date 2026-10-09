@@ -19,9 +19,17 @@ const PORT = Number(process.env.API_PORT ?? 4000);
 const log = createLogger({ service: 'api' });
 const env = getEnv();
 
+/** Parse CORS_ORIGIN env var (comma-separated) or default to localhost for dev. */
+function corsOrigin(): string | string[] | boolean {
+  const raw = process.env.CORS_ORIGIN?.trim();
+  if (!raw) return true; // dev: allow all
+  if (raw === '*') return true;
+  return raw.split(',').map(s => s.trim()).filter(Boolean);
+}
+
 async function main(): Promise<void> {
   const app = Fastify({ logger: false });
-  await app.register(cors, { origin: true });
+  await app.register(cors, { origin: corsOrigin(), credentials: true });
   await app.register(jwt, { secret: env.JWT_SECRET, sign: { expiresIn: env.JWT_EXPIRES_IN } });
   await app.register(websocket);
 

@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "AI-Powered Distributed Observability & Autonomous Incident Response Platform",
-  "author": "Abhishek Yadav",
+  "author": "Abhishhek Yadav",
   "license": "MIT",
   "engines": {
     "node": ">=20"
@@ -12,6 +12,7 @@
   "workspaces": [
     "packages/*",
     "services/*",
+    "control-plane/*",
     "apps/*"
   ],
   "scripts": {
@@ -32,7 +33,10 @@
     "db:status": "node --import tsx packages/db/src/cli.ts status",
     "dev:payment": "npm run dev -w @sentinelops/payment-service",
     "dev:order": "npm run dev -w @sentinelops/order-service",
-    "dev:gateway": "npm run dev -w @sentinelops/api-gateway"
+    "dev:gateway": "npm run dev -w @sentinelops/api-gateway",
+    "dev:anomaly": "npm run dev -w @sentinelops/anomaly-engine",
+    "dev:incident": "npm run dev -w @sentinelops/incident-engine",
+    "dev:ingestor": "npm run dev -w @sentinelops/ingestor"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",

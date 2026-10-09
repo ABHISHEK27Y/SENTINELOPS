@@ -1,0 +1,31 @@
+{
+  "$schema": "https://knip.dev/schema.json",
+  "workspaces": {
+    ".": {
+      "entry": [
+        "apps/api/src/index.ts",
+        "apps/web/**/*.tsx",
+        "services/*/src/index.ts",
+        "control-plane/*/src/index.ts",
+        "packages/*/src/index.ts",
+        "packages/*/src/**/*.test.ts",
+        "vitest.config.*",
+        "eslint.config.*",
+        "prettier.config.*",
+        ".github/workflows/**/*.yml"
+      ],
+      "project": ["package.json", "tsconfig.json", "tsconfig.base.json"]
+    }
+  },
+  "ignore": [
+    "@sentinelops/*",
+    "eslint-plugin-import",
+    "knip",
+    "prettier"
+  ],
+  "ignoreDependencies": [
+    "@types/node",
+    "typescript",
+    "vitest"
+  ]
+}
