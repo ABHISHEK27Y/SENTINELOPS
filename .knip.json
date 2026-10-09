@@ -29,9 +29,5 @@
     "@sentinelops/shared-types",
     "@opentelemetry/semantic-conventions"
   ],
-  "ignore": [
-    "apps/web/lib/api.ts",
-    "apps/api/src/topology.ts",
-    "apps/web/lib/store.ts"
-  ]
+  "ignore": ["apps/web/lib/api.ts", "apps/api/src/topology.ts", "apps/web/lib/store.ts"]
 }
