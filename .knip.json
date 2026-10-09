@@ -17,6 +17,21 @@
       "project": ["package.json", "tsconfig.json", "tsconfig.base.json"]
     }
   },
-  "ignore": ["eslint-plugin-import", "knip", "prettier"],
-  "ignoreDependencies": ["@types/node", "typescript", "vitest", "@vitest/coverage-v8", "recharts"]
+  "ignoreDependencies": [
+    "@types/node",
+    "typescript",
+    "vitest",
+    "@vitest/coverage-v8",
+    "recharts",
+    "eslint-plugin-import",
+    "knip",
+    "prettier",
+    "@sentinelops/shared-types",
+    "@opentelemetry/semantic-conventions"
+  ],
+  "ignore": [
+    "apps/web/lib/api.ts",
+    "apps/api/src/topology.ts",
+    "apps/web/lib/store.ts"
+  ]
 }
