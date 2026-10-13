@@ -1,13 +1,15 @@
 # SentinelOps Documentation
 
+> **Start here if you are learning:** [SentinelOps from zero — 18-chapter Hinglish course](LEARN_SENTINELOPS_FROM_ZERO.md). It distinguishes the verified local implementation from older target-design documents. For current behavior and results, also read [implemented architecture](architecture/IMPLEMENTED_ARCHITECTURE.md) and the [final check](FINAL_CHECK_2026-10-13.md).
+
 This is the complete documentation set for **SentinelOps** — the AI-Powered
 Distributed Observability & Autonomous Incident Response Platform. It documents
 **what** is being built, **how** it is built, **why** each decision was made, and
 **how every component connects** to the rest of the system.
 
-> Documentation is written alongside the code and kept accurate to it. When a doc
-> references an API, endpoint, table, or file, that thing exists in the codebase at
-> the path shown. Anything not yet implemented is explicitly marked *(planned)*.
+> Older architecture pages include target design as well as implemented behavior.
+> Use the learning guide and implemented-architecture document above for the
+> current runtime; verify any production claim against source and the final check.
 
 ---
 

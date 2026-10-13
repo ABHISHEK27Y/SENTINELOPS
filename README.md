@@ -2,6 +2,8 @@
 
 **AI-Powered Distributed Observability & Autonomous Incident Response Platform**
 
+**New to the stack?** Start with the [18-chapter Hinglish learning guide](docs/LEARN_SENTINELOPS_FROM_ZERO.md). It explains the project from web basics to distributed-system reliability, with code links, exercises and a clear boundary between the working local demo and production plans.
+
 SentinelOps is a "software-system doctor". It watches a fleet of microservices,
 detects abnormal behaviour from **real telemetry**, correlates related anomalies
 into a single **incident**, reasons about the **root cause**, explains it with an
@@ -133,7 +135,7 @@ the named database volumes.
 
 Repairs are tracked in [the six-phase checklist](docs/FIX_PLAN.md), based on the
 [architecture review](docs/PROJECT_REVIEW_2026-10-09.md). The last fully passing
-coverage run passed 229 tests: 88.30% lines, 86.46% statements, 80.62% functions
+coverage run passed 230 tests: 88.30% lines, 86.46% statements, 80.62% functions
 and 77.36% branches. The original coverage gate remains unchanged.
 See the [12 October repair report](docs/REPAIR_PROGRESS_2026-10-12.md).
 
