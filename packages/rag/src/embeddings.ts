@@ -58,7 +58,43 @@ export function cosineSimilarity(a: number[], b: number[]): number {
 /** Factory honoring EMBEDDINGS_PROVIDER; falls back to the mock embedder. */
 export function getEmbedder(): Embedder {
   const env = getEnv();
-  // 'openai-compatible' would fetch from an embeddings API here; until wired,
-  // fall back to the deterministic mock so the system always runs.
+  if (env.EMBEDDINGS_PROVIDER === 'openai-compatible') {
+    if (!env.OPENAI_API_KEY || !env.OPENAI_BASE_URL)
+      throw new Error('embedding provider requires API key and base URL');
+    return new OpenAiEmbedder(env.EMBEDDINGS_DIM, env.OPENAI_API_KEY, env.OPENAI_BASE_URL);
+  }
   return new MockEmbedder(env.EMBEDDINGS_DIM);
+}
+
+export class OpenAiEmbedder implements Embedder {
+  constructor(
+    readonly dim: number,
+    private key: string,
+    private baseUrl: string
+  ) {}
+  async embed(text: string): Promise<number[]> {
+    return (await this.embedBatch([text]))[0]!;
+  }
+  async embedBatch(texts: string[]): Promise<number[][]> {
+    if (!texts.length) return [];
+    const res = await fetch(`${this.baseUrl.replace(/\/$/, '')}/embeddings`, {
+      method: 'POST',
+      signal: AbortSignal.timeout(15000),
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${this.key}` },
+      body: JSON.stringify({ model: 'text-embedding-3-small', dimensions: this.dim, input: texts }),
+    });
+    if (!res.ok) throw new Error(`embedding provider ${res.status}`);
+    const data = (await res.json()) as { data: Array<{ index: number; embedding: number[] }> };
+    const ordered = data.data.sort((a, b) => a.index - b.index);
+    if (ordered.length !== texts.length) throw new Error('incomplete embeddings');
+    if (ordered.some((item, index) => item.index !== index))
+      throw new Error('invalid embedding indexes');
+    return ordered.map(({ embedding }) => {
+      if (embedding.length !== this.dim || embedding.some(x => !Number.isFinite(x)))
+        throw new Error('invalid embedding dimensions/values');
+      const norm = Math.sqrt(embedding.reduce((sum, x) => sum + x * x, 0));
+      if (!norm) throw new Error('zero embedding');
+      return embedding.map(x => x / norm);
+    });
+  }
 }

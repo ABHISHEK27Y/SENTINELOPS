@@ -1,6 +1,7 @@
 'use client';
-import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+
 import { login } from '@/lib/api';
 import { useAuth } from '@/lib/store';
 
@@ -20,8 +21,8 @@ export default function LoginPage() {
       const { token, user } = await login(email, password);
       setAuth(token, user);
       router.replace('/dashboard');
-    } catch {
-      setError('Invalid credentials');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Sign-in unavailable');
     } finally {
       setBusy(false);
     }
@@ -35,17 +36,26 @@ export default function LoginPage() {
           <div className="text-xs text-muted uppercase tracking-widest">SRE Console — Sign in</div>
         </div>
         <div>
-          <label className="label">Email</label>
+          <label htmlFor="email" className="label">
+            Email
+          </label>
           <input
+            id="email"
+            type="email"
+            autoComplete="username"
             className="w-full mt-1 bg-panel2 border border-border rounded px-3 py-2 text-sm"
             value={email}
             onChange={e => setEmail(e.target.value)}
           />
         </div>
         <div>
-          <label className="label">Password</label>
+          <label htmlFor="password" className="label">
+            Password
+          </label>
           <input
+            id="password"
             type="password"
+            autoComplete="current-password"
             className="w-full mt-1 bg-panel2 border border-border rounded px-3 py-2 text-sm"
             value={password}
             onChange={e => setPassword(e.target.value)}

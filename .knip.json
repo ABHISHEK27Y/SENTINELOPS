@@ -2,32 +2,24 @@
   "$schema": "https://knip.dev/schema.json",
   "workspaces": {
     ".": {
-      "entry": [
-        "apps/api/src/index.ts",
-        "apps/web/**/*.tsx",
-        "services/*/src/index.ts",
-        "control-plane/*/src/index.ts",
-        "packages/*/src/index.ts",
-        "packages/*/src/**/*.test.ts",
-        "vitest.config.*",
-        "eslint.config.*",
-        "prettier.config.*",
-        ".github/workflows/**/*.yml"
-      ],
+      "entry": ["eslint.config.*", "scripts/*.{mjs,cjs}", ".github/workflows/**/*.yml"],
       "project": ["package.json", "tsconfig.json", "tsconfig.base.json"]
+    },
+    "apps/api": {
+      "project": ["src/**/*.ts"]
+    },
+    "apps/web": {
+      "project": ["**/*.{ts,tsx}"]
+    },
+    "packages/*": {
+      "project": ["src/**/*.ts"]
+    },
+    "services/*": {
+      "project": ["src/**/*.ts"]
+    },
+    "control-plane/*": {
+      "project": ["src/**/*.ts"]
     }
   },
-  "ignoreDependencies": [
-    "@types/node",
-    "typescript",
-    "vitest",
-    "@vitest/coverage-v8",
-    "recharts",
-    "eslint-plugin-import",
-    "knip",
-    "prettier",
-    "@sentinelops/shared-types",
-    "@opentelemetry/semantic-conventions"
-  ],
-  "ignore": ["apps/web/lib/api.ts", "apps/api/src/topology.ts", "apps/web/lib/store.ts"]
+  "ignoreDependencies": ["@vitest/coverage-v8", "recharts", "@opentelemetry/semantic-conventions"]
 }

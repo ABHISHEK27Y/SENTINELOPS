@@ -29,6 +29,8 @@ export interface CorrelatorOptions {
   windowMs?: number;
   /** Max dependency-graph hops for two services to be "related". */
   maxHops?: number;
+  /** Out-of-order events may trail the persisted event watermark by this much. */
+  maxLatenessMs?: number;
   /** Injected id generator (tests pass a deterministic one). */
   idGen?: () => string;
 }
@@ -38,6 +40,8 @@ export class Correlator {
   private windowMs: number;
   private maxHops: number;
   private idGen: () => string;
+  private watermark = 0;
+  private maxLatenessMs: number;
 
   constructor(
     private graph: DependencyGraph,
@@ -45,17 +49,22 @@ export class Correlator {
   ) {
     this.windowMs = opts.windowMs ?? 60_000;
     this.maxHops = opts.maxHops ?? 2;
+    this.maxLatenessMs = opts.maxLatenessMs ?? this.windowMs;
     this.idGen = opts.idGen ?? (() => crypto.randomUUID());
   }
 
   /** Assign an anomaly to a new or existing incident group. */
   ingest(anomaly: Anomaly, nowMs = Date.parse(anomaly.windowEnd)): CorrelationResult {
-    this.expire(nowMs);
+    if (!Number.isFinite(nowMs)) throw new RangeError('invalid anomaly timestamp');
+    if (this.isLate(nowMs)) throw new RangeError('anomaly exceeds correlation lateness allowance');
+    this.watermark = Math.max(this.watermark, nowMs);
+    this.expire(this.watermark);
 
     const match = this.findGroup(anomaly, nowMs);
     if (match) {
       match.services.add(anomaly.service);
       match.anomalies.push(anomaly);
+      if (match.anomalies.length > 500) match.anomalies.splice(0, match.anomalies.length - 500);
       match.lastSeen = Math.max(match.lastSeen, nowMs);
       return {
         correlationId: match.correlationId,
@@ -84,6 +93,7 @@ export class Correlator {
   private findGroup(anomaly: Anomaly, nowMs: number): CorrelationGroup | undefined {
     for (const group of this.groups.values()) {
       if (nowMs - group.lastSeen > this.windowMs) continue;
+      if (nowMs < group.firstSeen - this.windowMs) continue;
       for (const svc of group.services) {
         if (svc === anomaly.service || this.graph.related(svc, anomaly.service, this.maxHops)) {
           return group;
@@ -111,5 +121,49 @@ export class Correlator {
 
   openGroups(): CorrelationGroup[] {
     return [...this.groups.values()];
+  }
+
+  close(correlationId: string): void {
+    this.groups.delete(correlationId);
+  }
+
+  isLate(timestampMs: number): boolean {
+    return timestampMs < this.watermark - this.maxLatenessMs;
+  }
+
+  snapshot(): unknown {
+    return {
+      watermark: this.watermark,
+      groups: [...this.groups.values()].map(g => ({ ...g, services: [...g.services] })),
+    };
+  }
+
+  restore(state: unknown): void {
+    this.groups.clear();
+    this.watermark = 0;
+    const saved = state as { watermark?: number; groups?: unknown } | null;
+    const groups = Array.isArray(state) ? state : saved?.groups;
+    if (saved && Number.isFinite(saved.watermark)) this.watermark = saved.watermark!;
+    if (!Array.isArray(groups)) return;
+    for (const raw of groups as Array<
+      Omit<CorrelationGroup, 'services'> & { services: string[] }
+    >) {
+      if (
+        raw &&
+        typeof raw.correlationId === 'string' &&
+        Number.isFinite(raw.firstSeen) &&
+        Number.isFinite(raw.lastSeen) &&
+        raw.firstSeen <= raw.lastSeen &&
+        Array.isArray(raw.services) &&
+        Array.isArray(raw.anomalies)
+      ) {
+        this.groups.set(raw.correlationId, {
+          ...raw,
+          services: new Set(raw.services),
+          anomalies: raw.anomalies.slice(-500),
+        });
+        this.watermark = Math.max(this.watermark, raw.lastSeen);
+      }
+    }
   }
 }

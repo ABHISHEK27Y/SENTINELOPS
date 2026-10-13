@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { status, up, migrationsDir } from './migrate.js';
 import { closePool } from './pool.js';
+import { pruneTelemetry } from './retention.js';
 
 /**
  * Migration CLI.
@@ -10,6 +11,10 @@ import { closePool } from './pool.js';
 async function main(): Promise<void> {
   const cmd = process.argv[2] ?? 'up';
   switch (cmd) {
+    case 'prune': {
+      console.log(await pruneTelemetry(Number(process.argv[3] ?? 30)));
+      break;
+    }
     case 'up': {
       const { applied } = await up();
       console.log(
@@ -27,7 +32,7 @@ async function main(): Promise<void> {
       break;
     }
     default:
-      console.error(`unknown command: ${cmd} (use 'up' or 'status')`);
+      console.error(`unknown command: ${cmd} (use 'up', 'status', or 'prune [days]')`);
       process.exitCode = 1;
   }
 }

@@ -1,0 +1,7 @@
+{
+  "count": 21,
+  "running": 21,
+  "healthy": 12,
+  "withoutHealthcheck": 9,
+  "notRunning": []
+}

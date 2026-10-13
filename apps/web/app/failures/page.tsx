@@ -1,10 +1,11 @@
 'use client';
 import { useState } from 'react';
+
 import { Shell } from '@/components/Shell';
 import { Card } from '@/components/StatusBadge';
-import { useApi } from '@/lib/useApi';
 import { apiFetch } from '@/lib/api';
 import { useAuth, canApprove } from '@/lib/store';
+import { useApi } from '@/lib/useApi';
 
 const FAULTS = [
   {
@@ -65,7 +66,7 @@ interface FaultState {
 }
 
 export default function FailuresPage() {
-  const { data, reload } = useApi<FaultState[]>('/api/failures', 3000);
+  const { data, error, loading, stale, reload } = useApi<FaultState[]>('/api/failures', 3000);
   const user = useAuth(s => s.user);
   const engineer = canApprove(user);
   const [busy, setBusy] = useState('');
@@ -103,9 +104,14 @@ export default function FailuresPage() {
     <Shell>
       <h1 className="text-xl font-semibold mb-1">Failure Injection Console</h1>
       <p className="text-muted text-sm mb-4">
-        Inject real faults to exercise the detection → correlation → remediation loop.
+        Inject bounded demo faults to exercise the detection → correlation → remediation loop.
         {!engineer && <span className="text-warning"> Requires ENGINEER/ADMIN.</span>}
       </p>
+      {(error || stale || (data ?? []).some(s => s.unreachable)) && (
+        <p role="status" className="text-warning text-sm mb-4">
+          Fault status unavailable for some services. Displayed faults may be stale.
+        </p>
+      )}
 
       <div className="grid grid-cols-3 gap-3 mb-6">
         {FAULTS.map(f => (
@@ -125,7 +131,13 @@ export default function FailuresPage() {
 
       <Card title="Active faults">
         {active.length === 0 ? (
-          <div className="text-muted text-sm">No active faults. System is running clean.</div>
+          <div className="text-muted text-sm">
+            {loading
+              ? 'Loading faults…'
+              : error || (data ?? []).some(s => s.unreachable)
+                ? 'Fault status incomplete.'
+                : 'No active demo faults recorded.'}
+          </div>
         ) : (
           <div className="space-y-2">
             {active.map(s => (

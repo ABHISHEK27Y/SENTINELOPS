@@ -16,15 +16,19 @@
     "apps/*"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "typecheck": "tsc -p tsconfig.json --pretty",
+    "auth:create-user": "node --import tsx apps/api/src/create-user.ts",
+    "build": "npm run typecheck && npm run build -w @sentinelops/web",
+    "typecheck": "npm run typecheck:backend && npm run typecheck:web && npm run typecheck:tests",
+    "typecheck:tests": "tsc --noEmit -p tsconfig.tests.json",
+    "typecheck:backend": "tsc -p tsconfig.json --pretty",
+    "typecheck:web": "tsc --noEmit -p apps/web/tsconfig.json",
     "lint": "eslint . --ext .ts,.tsx",
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run --coverage",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage --coverage.threshold.lines=80 --coverage.threshold.branches=70 --coverage.threshold.functions=80 --coverage.threshold.statements=80",
+    "test:coverage": "vitest run --coverage --coverage.thresholds.lines=80 --coverage.thresholds.branches=70 --coverage.thresholds.functions=80 --coverage.thresholds.statements=80",
     "infra:up": "docker compose -f infrastructure/docker/docker-compose.infra.yml up -d",
     "infra:down": "docker compose -f infrastructure/docker/docker-compose.infra.yml down",
     "stack:up": "docker compose up -d --build",
@@ -38,23 +42,27 @@
     "dev:incident": "npm run dev -w @sentinelops/incident-engine",
     "dev:ingestor": "npm run dev -w @sentinelops/ingestor"
   },
+  "dependencies": {
+    "tsx": "^4.19.2"
+  },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/react": "^16.3.3",
     "@types/node": "^22.10.0",
-    "@vitest/coverage-v8": "^2.1.9",
+    "@vitest/coverage-v8": "^4.1.11",
     "eslint": "^9.39.5",
     "eslint-plugin-import": "^2.31.0",
-    "knip": "^5.32.0",
+    "happy-dom": "^20.14.6",
+    "knip": "^6.41.0",
     "prettier": "^3.3.3",
-    "tsx": "^4.19.2",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
     "typescript": "^5.7.2",
     "typescript-eslint": "^8.71.0",
-    "vitest": "~2.1.9"
+    "vitest": "^4.1.11"
   },
   "overrides": {
-    "@opentelemetry/sdk-metrics": "1.27.0",
-    "@opentelemetry/resources": "1.27.0",
-    "@opentelemetry/sdk-trace-base": "1.27.0",
     "@opentelemetry/api": "1.9.0"
   }
 }

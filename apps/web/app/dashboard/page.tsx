@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+
 import { Shell } from '@/components/Shell';
 import { Card, HealthBadge, SeverityBadge, StatusBadge } from '@/components/StatusBadge';
 import { useApi } from '@/lib/useApi';
@@ -35,6 +36,17 @@ export default function DashboardPage() {
     <Shell>
       <h1 className="text-xl font-semibold mb-1">System Overview</h1>
       <p className="text-muted text-sm mb-6">Live health across the monitored fleet.</p>
+      {(services.stale || incidents.stale || services.error || incidents.error) && (
+        <p role="status" className="text-warning text-sm mb-4">
+          Live updates unavailable.{' '}
+          {services.updatedAt
+            ? `Services last updated ${new Date(services.updatedAt).toLocaleTimeString()}. `
+            : ''}
+          {incidents.updatedAt
+            ? `Incidents last updated ${new Date(incidents.updatedAt).toLocaleTimeString()}.`
+            : ''}
+        </p>
+      )}
 
       <div className="grid grid-cols-4 gap-4 mb-6">
         <Card>
@@ -69,7 +81,11 @@ export default function DashboardPage() {
           >
             {active.length === 0 ? (
               <div className="text-muted text-sm py-6 text-center">
-                No active incidents. System nominal.
+                {incidents.loading
+                  ? 'Loading incidents…'
+                  : incidents.error
+                    ? 'Incident status unavailable.'
+                    : 'No active incidents recorded.'}
               </div>
             ) : (
               <table className="w-full">

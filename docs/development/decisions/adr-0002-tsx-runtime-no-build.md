@@ -24,8 +24,9 @@ first, regardless of runtime.
 - **OTel ordering**: each service's `index.ts` does
   `await startTelemetry(name)` and then a **dynamic** `import('./app.js')`, so the app
   (and the libraries it imports) load *after* instrumentation is installed.
-- **Prod (Phase 3+)**: Docker images compile with `tsc` for a lean, dependency-free
-  runtime.
+- **Production (revised 2026-10-10)**: retain `tsx` as a production dependency and
+  execute source TypeScript. Workspace exports remain source paths. The image
+  validates backend and frontend types and builds Next; web uses `next start`.
 
 ## Consequences
 
@@ -35,8 +36,8 @@ first, regardless of runtime.
 - The dynamic-import pattern makes OTel work reliably without a preloader flag.
 
 **Negative / mitigations**
-- Dev and prod use different runtimes → mitigated by the shared strict `tsconfig` and
-  CI running the same typecheck + tests that prod builds from.
+- Source and the transpilation runtime increase image size. All workspaces are
+  copied; development dependencies are pruned after the build.
 - `tsx` doesn't type-check → that's `npm run typecheck`'s job, run in CI.
 
 ## Revisit if

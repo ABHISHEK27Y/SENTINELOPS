@@ -15,15 +15,10 @@ route:
 
 receivers:
   - name: 'default'
-    # In production, configure webhook/email/Slack/PagerDuty here
-    webhook_configs:
-      - url: 'http://alertmanager-webhook:5000/alerts'
-        send_resolved: true
+    # Demo receiver intentionally has no external delivery. Configure a real
+    # receiver before enabling external notifications.
 
   - name: 'critical'
-    webhook_configs:
-      - url: 'http://alertmanager-webhook:5000/alerts/critical'
-        send_resolved: true
 
 inhibit_rules:
   - source_match:

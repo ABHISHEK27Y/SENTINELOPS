@@ -1,0 +1,67 @@
+[
+  {
+    "job": "alertmanager",
+    "health": "up",
+    "lastError": ""
+  },
+  {
+    "job": "loki",
+    "health": "up",
+    "lastError": ""
+  },
+  {
+    "job": "otel-collector",
+    "health": "up",
+    "lastError": ""
+  },
+  {
+    "job": "prometheus",
+    "health": "up",
+    "lastError": ""
+  },
+  {
+    "job": "sentinelops-api",
+    "health": "up",
+    "lastError": ""
+  },
+  {
+    "job": "sentinelops-control-plane",
+    "health": "up",
+    "lastError": ""
+  },
+  {
+    "job": "sentinelops-control-plane",
+    "health": "up",
+    "lastError": ""
+  },
+  {
+    "job": "sentinelops-control-plane",
+    "health": "up",
+    "lastError": ""
+  },
+  {
+    "job": "sentinelops-services",
+    "health": "up",
+    "lastError": ""
+  },
+  {
+    "job": "sentinelops-services",
+    "health": "up",
+    "lastError": ""
+  },
+  {
+    "job": "sentinelops-services",
+    "health": "up",
+    "lastError": ""
+  },
+  {
+    "job": "sentinelops-services",
+    "health": "up",
+    "lastError": ""
+  },
+  {
+    "job": "sentinelops-services",
+    "health": "up",
+    "lastError": ""
+  }
+]

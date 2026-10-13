@@ -6,13 +6,24 @@ import {
   type InvestigationContext,
   type LlmProvider,
 } from '@sentinelops/ai';
-import { canTransition } from '@sentinelops/correlation';
-import { query } from '@sentinelops/db';
-import type { InMemoryRetriever } from '@sentinelops/rag';
+import { query, transitionIncident, transaction } from '@sentinelops/db';
+import type { Retriever } from '@sentinelops/rag';
 import { recommendActions } from '@sentinelops/remediation';
+import { Role, type IncidentStatus } from '@sentinelops/shared-types';
 
-import { authenticate } from '../auth.js';
+import { authenticate, requireRole } from '../auth.js';
 import { SERVICES } from '../topology.js';
+
+function currentIncidentTitle<T extends { title: string; affected_services: string[] }>(row: T): T {
+  const count = row.affected_services.length;
+  return {
+    ...row,
+    title: row.title.replace(
+      /\(\d+ services? affected\)$/,
+      `(${count} service${count === 1 ? '' : 's'} affected)`
+    ),
+  };
+}
 
 async function loadIncident(id: string) {
   const { rows } = await query(
@@ -21,7 +32,7 @@ async function loadIncident(id: string) {
        FROM incidents WHERE id = $1`,
     [id]
   );
-  return rows[0] as
+  const incident = rows[0] as
     | {
         id: string;
         title: string;
@@ -35,16 +46,11 @@ async function loadIncident(id: string) {
         resolved_at: string | null;
       }
     | undefined;
+  return incident ? currentIncidentTitle(incident) : undefined;
 }
 
 async function setStatus(id: string, from: string, to: string): Promise<void> {
-  if (!canTransition(from as never, to as never)) return;
-  await query('UPDATE incidents SET status = $1, updated_at = now() WHERE id = $2', [to, id]);
-  await query(`INSERT INTO incident_events (incident_id, kind, message) VALUES ($1,$2,$3)`, [
-    id,
-    'status',
-    `status → ${to}`,
-  ]);
+  await transitionIncident(id, to as IncidentStatus, 'status changed', from as IncidentStatus);
 }
 
 function rootCauseService(title: string | undefined, affected: string[]): string {
@@ -57,7 +63,7 @@ function rootCauseService(title: string | undefined, affected: string[]): string
 
 export function registerIncidentRoutes(
   app: FastifyInstance,
-  retriever: InMemoryRetriever,
+  retriever: Retriever,
   provider: LlmProvider
 ): void {
   app.get('/api/incidents', { preHandler: [authenticate] }, async () => {
@@ -66,7 +72,9 @@ export function registerIncidentRoutes(
               started_at, detected_at, resolved_at
          FROM incidents ORDER BY detected_at DESC LIMIT 100`
     );
-    return rows;
+    return rows.map(row =>
+      currentIncidentTitle(row as { title: string; affected_services: string[] })
+    );
   });
 
   app.get<{ Params: { id: string } }>(
@@ -108,7 +116,7 @@ export function registerIncidentRoutes(
   // Phase 11 — AI investigation.
   app.post<{ Params: { id: string } }>(
     '/api/incidents/:id/investigate',
-    { preHandler: [authenticate] },
+    { preHandler: [requireRole(Role.ENGINEER, Role.ADMIN)] },
     async (req, reply) => {
       const incident = await loadIncident(req.params.id);
       if (!incident) return reply.code(404).send({ error: 'unknown incident' });
@@ -139,8 +147,8 @@ export function registerIncidentRoutes(
       const deployments = (
         await query<{ service_id: string; deployed_at: string }>(
           `SELECT service_id, deployed_at FROM deployments
-            WHERE service_id = ANY($1) ORDER BY deployed_at DESC LIMIT 5`,
-          [incident.affected_services]
+            WHERE service_id = ANY($1) AND deployed_at <= $2::timestamptz AND deployed_at >= $2::timestamptz - interval '15 minutes' ORDER BY deployed_at DESC LIMIT 5`,
+          [incident.affected_services, incident.started_at]
         )
       ).rows;
 
@@ -186,16 +194,26 @@ export function registerIncidentRoutes(
 
       const investigation = await buildInvestigation(ctx, provider);
 
-      await query(
-        `INSERT INTO incident_events (incident_id, kind, message, data)
+      await transaction(async () => {
+        let current = (
+          await query<{ status: IncidentStatus }>(
+            'SELECT status FROM incidents WHERE id=$1 FOR UPDATE',
+            [incident.id]
+          )
+        ).rows[0]?.status;
+        if (!current) throw new Error('incident disappeared during investigation');
+        await query(
+          `INSERT INTO incident_events (incident_id, kind, message, data)
          VALUES ($1,'ai_investigation',$2,$3)`,
-        [incident.id, 'AI investigation completed', JSON.stringify(investigation)]
-      );
-      if (incident.status === 'DETECTED') await setStatus(incident.id, 'DETECTED', 'INVESTIGATING');
-      if (rc?.title) {
-        const cur = (await loadIncident(incident.id))!.status;
-        if (cur === 'INVESTIGATING') await setStatus(incident.id, 'INVESTIGATING', 'IDENTIFIED');
-      }
+          [incident.id, 'AI investigation completed', JSON.stringify(investigation)]
+        );
+        if (current === 'DETECTED') {
+          await setStatus(incident.id, 'DETECTED', 'INVESTIGATING');
+          current = 'INVESTIGATING';
+        }
+        if (rc?.title && current === 'INVESTIGATING')
+          await setStatus(incident.id, 'INVESTIGATING', 'IDENTIFIED');
+      });
       return { investigation, recommendedActions: actions };
     }
   );
@@ -203,10 +221,12 @@ export function registerIncidentRoutes(
   // Phase 20 — postmortem generation (after resolution).
   app.post<{ Params: { id: string } }>(
     '/api/incidents/:id/postmortem',
-    { preHandler: [authenticate] },
+    { preHandler: [requireRole(Role.ENGINEER, Role.ADMIN)] },
     async (req, reply) => {
       const incident = await loadIncident(req.params.id);
       if (!incident) return reply.code(404).send({ error: 'unknown incident' });
+      if (!['RESOLVED', 'POSTMORTEM'].includes(incident.status))
+        return reply.code(409).send({ error: 'resolve incident before generating postmortem' });
 
       const invEvent = (
         await query<{ data: unknown }>(
@@ -246,12 +266,22 @@ export function registerIncidentRoutes(
         timeline: timeline.map(t => ({ at: t.at, message: t.message })),
       });
 
-      await query(
-        `INSERT INTO postmortems (incident_id, content_md) VALUES ($1,$2)
+      await transaction(async () => {
+        const current = (
+          await query<{ status: IncidentStatus }>(
+            'SELECT status FROM incidents WHERE id=$1 FOR UPDATE',
+            [incident.id]
+          )
+        ).rows[0]?.status;
+        if (!current || !['RESOLVED', 'POSTMORTEM'].includes(current))
+          throw new Error('incident is no longer resolved');
+        await query(
+          `INSERT INTO postmortems (incident_id, content_md) VALUES ($1,$2)
          ON CONFLICT (incident_id) DO UPDATE SET content_md = EXCLUDED.content_md, generated_at = now()`,
-        [incident.id, md]
-      );
-      if (incident.status === 'RESOLVED') await setStatus(incident.id, 'RESOLVED', 'POSTMORTEM');
+          [incident.id, md]
+        );
+        if (current === 'RESOLVED') await setStatus(incident.id, 'RESOLVED', 'POSTMORTEM');
+      });
       return { postmortem: md };
     }
   );

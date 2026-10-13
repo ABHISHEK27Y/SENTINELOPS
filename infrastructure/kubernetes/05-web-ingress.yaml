@@ -11,9 +11,9 @@ spec:
         - name: web
           image: sentinelops/app:local
           imagePullPolicy: IfNotPresent
-          command: ['npm', 'run', 'dev', '-w', '@sentinelops/web']
+          command: ['npm', 'run', 'start', '-w', '@sentinelops/web']
           env:
-            - { name: NODE_ENV, value: 'development' }
+            - { name: NODE_ENV, value: 'production' }
             - { name: NEXT_PUBLIC_API_URL, value: 'http://sentinelops.local' }
             - { name: NEXT_PUBLIC_WS_URL, value: 'ws://sentinelops.local/ws' }
           ports: [{ containerPort: 3000 }]
@@ -29,8 +29,6 @@ kind: Ingress
 metadata:
   name: sentinelops
   namespace: sentinelops
-  annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
 spec:
   ingressClassName: nginx
   rules:

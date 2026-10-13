@@ -45,7 +45,7 @@ describe('rankRootCauses', () => {
     expect(hyps[0]!.confidence).toBeGreaterThan(hyps[1]!.confidence);
     // postgres has 2 dependents (payment, order) in the incident.
     const depEvidence = hyps[0]!.evidence.find(e => e.kind === 'dependency');
-    expect(depEvidence?.data.dependents).toBe(2);
+    expect(depEvidence?.data['dependents']).toBe(2);
   });
 
   it('boosts a candidate that was recently deployed', () => {

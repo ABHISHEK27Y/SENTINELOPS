@@ -1,5 +1,9 @@
+import { timingSafeEqual } from 'node:crypto';
+
+import { context, trace } from '@opentelemetry/api';
 import Fastify, { type FastifyInstance } from 'fastify';
 
+import { getEnv } from '@sentinelops/config';
 import { EventProducer } from '@sentinelops/kafka';
 import { createLogger, type Logger } from '@sentinelops/logger';
 import {
@@ -57,19 +61,54 @@ export function createService(opts: CreateServiceOptions): ServiceContext {
     ? new TelemetryPublisher(producer, serviceName, metrics.registry, log)
     : null;
 
-  const app = Fastify({ logger: false, disableRequestLogging: true });
+  const app = Fastify({ logger: false });
+  const env = getEnv();
+  if (env.DEMO_MODE && env.INTERNAL_API_TOKEN.length < 32)
+    throw new Error(
+      'demo fault administration requires INTERNAL_API_TOKEN of at least 32 characters'
+    );
+  app.addHook('onRequest', async (req, reply) => {
+    if (!req.url.startsWith('/admin/')) return;
+    if (!env.DEMO_MODE) return reply.code(404).send({ error: 'demo administration disabled' });
+    const token = req.headers['x-internal-token'];
+    if (
+      typeof token !== 'string' ||
+      Buffer.byteLength(token) !== Buffer.byteLength(env.INTERNAL_API_TOKEN) ||
+      !timingSafeEqual(Buffer.from(token), Buffer.from(env.INTERNAL_API_TOKEN))
+    ) {
+      return reply.code(401).send({ error: 'unauthorized' });
+    }
+  });
 
   // ── Request timing + access logging ──────────────────────────────────
   app.addHook('onRequest', async req => {
     (req as { startTime?: bigint }).startTime = process.hrtime.bigint();
     const rid = (req.headers['x-request-id'] as string | undefined) ?? crypto.randomUUID();
     (req as { requestId?: string }).requestId = rid;
+    const span = trace.getSpan(context.active());
+    if (span) (req as { traceId?: string }).traceId = span.spanContext().traceId;
+  });
+  app.addHook('preHandler', async (req, reply) => {
+    if (/^\/(health|metrics|admin)(\/|$)/.test(req.url)) return;
+    if (faults.isKilled() || faults.networkBroken())
+      return reply.code(503).send({ error: 'injected service/dependency failure' });
+    if (Math.random() < faults.errorProbability())
+      return reply.code(500).send({ error: 'injected error' });
+    const lag = faults.kafkaLagMs();
+    if (lag > 0) await sleep(lag); // explicit simulated dependency delay
+    const factor = faults.trafficSpikeFactor();
+    if (factor > 1) {
+      // Real additional demo dependency work; bounded to avoid unbounded fan-out.
+      await Promise.all(
+        Array.from({ length: Math.min(10, Math.floor(factor)) - 1 }, () => simulateDbQuery())
+      );
+    }
   });
 
   app.addHook('onResponse', async (req, reply) => {
     const start = (req as { startTime?: bigint }).startTime;
     const durationMs = start ? Number(process.hrtime.bigint() - start) / 1e6 : 0;
-    const route = req.routeOptions?.url ?? req.url;
+    const route = req.routeOptions?.url ?? 'unmatched';
     const status = String(reply.statusCode);
     const labels = { method: req.method, route, status };
     metrics.httpDuration.observe(labels, durationMs);
@@ -136,6 +175,28 @@ export function createService(opts: CreateServiceOptions): ServiceContext {
   app.get('/admin/faults', async () => ({ faults: faults.list() }));
   app.post<{ Body: { type: FaultTypeT; params?: FaultParams } }>(
     '/admin/faults',
+    {
+      schema: {
+        body: {
+          type: 'object',
+          required: ['type'],
+          additionalProperties: false,
+          properties: {
+            type: { type: 'string', enum: Object.values(FaultType) },
+            params: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {
+                targetMs: { type: 'number', minimum: 0, maximum: 5000 },
+                probability: { type: 'number', minimum: 0, maximum: 1 },
+                ttlMs: { type: 'number', minimum: 100, maximum: 900000 },
+                factor: { type: 'number', minimum: 1, maximum: 10 },
+              },
+            },
+          },
+        },
+      },
+    },
     async (req, reply) => {
       const { type, params } = req.body ?? ({} as { type: FaultTypeT });
       const valid = Object.values(FaultType).includes(type);
@@ -157,6 +218,7 @@ export function createService(opts: CreateServiceOptions): ServiceContext {
 
   // ── Simulated dependency calls (real timing, fault-aware) ────────────
   const simulateDbQuery = async (baseMs = dbBaselineMs): Promise<number> => {
+    if (faults.networkBroken()) throw new Error('injected database network failure');
     const jitter = baseMs * (0.5 + Math.random());
     const latency = jitter + faults.dbLatencyMs();
     metrics.dbPoolUtilization.set(faults.dbPoolPressure(dbBaselineMs));
@@ -166,6 +228,7 @@ export function createService(opts: CreateServiceOptions): ServiceContext {
   };
 
   const simulateRedisOp = async (baseMs = redisBaselineMs): Promise<number> => {
+    if (faults.networkBroken()) throw new Error('injected cache network failure');
     if (faults.redisBroken()) {
       metrics.redisLatency.observe(250);
       throw new Error('redis connection refused (fault: break_redis)');
@@ -189,7 +252,7 @@ export function createService(opts: CreateServiceOptions): ServiceContext {
     metrics.memoryUsage.set(process.memoryUsage().rss);
     // Only drive queue_depth from the kafka_lag fault; services that own a real
     // queue (e.g. notification-service) set this gauge themselves.
-    if (faults.kafkaLagMs() > 0) metrics.queueDepth.set(faults.kafkaLagMs() / 10);
+    if (serviceName !== 'notification-service') metrics.queueDepth.set(faults.kafkaLagMs() / 10);
     lastCpu = cpu;
     lastHr = now;
   }, 2000);
@@ -207,7 +270,7 @@ export function createService(opts: CreateServiceOptions): ServiceContext {
 
   const stop = async (): Promise<void> => {
     clearInterval(infraTimer);
-    publisher?.stop();
+    await publisher?.stop();
     faults.clear();
     await app.close();
     await producer?.disconnect();

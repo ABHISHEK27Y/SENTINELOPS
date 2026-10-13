@@ -20,7 +20,7 @@ output "redis_endpoint" {
 }
 
 output "kafka_bootstrap_brokers" {
-  value = aws_msk_cluster.kafka.bootstrap_brokers
+  value = aws_msk_cluster.kafka.bootstrap_brokers_tls
 }
 
 output "vpc_id" {

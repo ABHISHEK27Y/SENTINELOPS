@@ -411,7 +411,7 @@ spec:
           ports: [{ containerPort: 4000 }]
           readinessProbe:
             {
-              httpGet: { path: /api/health, port: 4000 },
+              httpGet: { path: /api/ready, port: 4000 },
               initialDelaySeconds: 10,
               periodSeconds: 10,
             }

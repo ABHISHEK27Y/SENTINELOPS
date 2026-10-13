@@ -1,5 +1,11 @@
 # Development Roadmap
 
+Audit correction, 10 October 2026: the historical checkmarks below describe source
+delivery, not completed live acceptance. Coverage, integration, persistence and
+deployment checks remain open. Use [the six-phase repair plan](../FIX_PLAN.md) and
+[implemented architecture](../architecture/IMPLEMENTED_ARCHITECTURE.md) for current
+decisions and verification status.
+
 The project is built in verifiable phases. Each phase ends with: it compiles
 (`npm run typecheck`), its tests pass (`npm test`), it actually runs, and a short
 build log is written under `docs/development/`.

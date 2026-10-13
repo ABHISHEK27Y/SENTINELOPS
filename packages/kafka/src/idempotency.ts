@@ -6,11 +6,8 @@
 import { Redis } from 'ioredis';
 
 export interface IdempotencyStore {
-  /**
-   * Atomically mark an event processed. Returns true if this is the FIRST time
-   * (caller should process), false if already seen (caller should skip).
-   */
-  markIfNew(eventId: string): Promise<boolean>;
+  hasProcessed(eventId: string): Promise<boolean>;
+  markProcessed(eventId: string): Promise<void>;
   close?(): Promise<void>;
 }
 
@@ -26,11 +23,14 @@ export class RedisIdempotencyStore implements IdempotencyStore {
     this.prefix = opts.prefix ?? 'idem';
   }
 
-  async markIfNew(eventId: string): Promise<boolean> {
+  async hasProcessed(eventId: string): Promise<boolean> {
+    return (await this.redis.exists(`${this.prefix}:${eventId}`)) === 1;
+  }
+
+  async markProcessed(eventId: string): Promise<void> {
     const key = `${this.prefix}:${eventId}`;
     // NX = only set if absent; EX = expiry. Returns 'OK' if set, null if existed.
-    const res = await this.redis.set(key, '1', 'EX', this.ttlSeconds, 'NX');
-    return res === 'OK';
+    await this.redis.set(key, '1', 'EX', this.ttlSeconds);
   }
 
   async close(): Promise<void> {
@@ -40,11 +40,15 @@ export class RedisIdempotencyStore implements IdempotencyStore {
 
 /** In-memory store for tests and single-process fallbacks. */
 export class InMemoryIdempotencyStore implements IdempotencyStore {
-  private seen = new Set<string>();
+  private seen = new Map<string, number>();
 
-  async markIfNew(eventId: string): Promise<boolean> {
-    if (this.seen.has(eventId)) return false;
-    this.seen.add(eventId);
-    return true;
+  async hasProcessed(eventId: string): Promise<boolean> {
+    const now = Date.now();
+    for (const [id, expiry] of this.seen) if (expiry <= now) this.seen.delete(id);
+    return this.seen.has(eventId);
+  }
+
+  async markProcessed(eventId: string): Promise<void> {
+    this.seen.set(eventId, Date.now() + 6 * 60 * 60 * 1000);
   }
 }

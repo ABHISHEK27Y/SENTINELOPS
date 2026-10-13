@@ -8,7 +8,6 @@
     "start": "tsx src/index.ts"
   },
   "dependencies": {
-    "@sentinelops/service-kit": "*",
-    "@sentinelops/shared-types": "*"
+    "@sentinelops/service-kit": "*"
   }
 }

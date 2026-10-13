@@ -42,6 +42,7 @@ export const LogRecordSchema = z.object({
 export type LogRecord = z.infer<typeof LogRecordSchema>;
 
 export const AnomalySchema = z.object({
+  instance: z.string().optional(),
   anomalyId: z.string().uuid(),
   service: z.string(),
   metric: z.string(),

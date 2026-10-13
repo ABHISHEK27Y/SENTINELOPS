@@ -7,11 +7,20 @@
 import { Registry, Counter, collectDefaultMetrics } from 'prom-client';
 
 import { getEnv } from '@sentinelops/config';
-import { getPool, closePool } from '@sentinelops/db';
+import { up, query, closePool, processEvent, enqueueEvent, startOutbox } from '@sentinelops/db';
 import { EventConsumer, EventProducer, RedisIdempotencyStore } from '@sentinelops/kafka';
 import { createLogger } from '@sentinelops/logger';
 import { startHealthServer } from '@sentinelops/service-kit';
-import { Topics, EventType, makeEnvelope, type MetricSample } from '@sentinelops/shared-types';
+import {
+  Topics,
+  EventType,
+  makeEnvelope,
+  MetricSampleSchema,
+  LogRecordSchema,
+  type MetricSample,
+  type EventEnvelope,
+  type TopicName,
+} from '@sentinelops/shared-types';
 
 const PORT = Number(process.env['INGESTOR_PORT'] ?? 8095);
 const log = createLogger({ service: 'ingestor' });
@@ -31,7 +40,7 @@ const mLogs = new Counter({
   registers: [registry],
 });
 
-const producer = new EventProducer({ logger: log.child({ mod: 'producer' }) });
+const producer = new EventProducer({ strict: true, logger: log.child({ mod: 'producer' }) });
 const consumer = new EventConsumer({
   groupId: 'ingestor',
   idempotency: new RedisIdempotencyStore({ url: env.REDIS_URL, prefix: 'idem:ingestor' }),
@@ -42,70 +51,75 @@ const consumer = new EventConsumer({
 function extractSamples(payload: unknown): MetricSample[] {
   if (payload && typeof payload === 'object') {
     const p = payload as { samples?: MetricSample[] };
-    if (Array.isArray(p.samples)) return p.samples;
+    if (Array.isArray(p.samples)) return p.samples.map(s => MetricSampleSchema.parse(s));
   }
   return [];
 }
 
 async function main(): Promise<void> {
+  await up();
   await producer.connect();
-  const health = await startHealthServer({ serviceName: 'ingestor', port: PORT, registry });
+  const stopOutbox = startOutbox(
+    (topic, envelope, key) => producer.send(topic as TopicName, envelope as EventEnvelope, key),
+    err => log.error({ err }, 'outbox dispatch failed')
+  );
+  const health = await startHealthServer({
+    serviceName: 'ingestor',
+    port: PORT,
+    registry,
+    ready: async () => consumer.isRunning && Boolean((await query('SELECT 1')).rowCount),
+  });
   log.info({ port: PORT }, 'ingestor up');
 
   await consumer.run({
     topics: [Topics.telemetry, Topics.logs],
-    handler: async (envelope, ctx) => {
-      if (ctx.topic === Topics.telemetry) {
-        const samples = extractSamples(envelope.payload);
-        for (const s of samples) {
-          await getPool().query(
-            `INSERT INTO metrics (service_id, metric, value, labels, ts) VALUES ($1,$2,$3,$4,$5)`,
-            [envelope.service, s.metric, s.value, JSON.stringify(s.labels ?? {}), s.ts]
-          );
-          mMetrics.inc();
-        }
-        // Republish normalized samples for any metrics.events consumer.
-        if (samples.length > 0) {
-          await producer.send(
-            Topics.metrics,
-            makeEnvelope({
-              type: EventType.METRIC_SAMPLE,
-              service: envelope.service,
-              payload: { samples },
-            })
-          );
-        }
-      } else if (ctx.topic === Topics.logs) {
-        const p = envelope.payload as {
-          level?: string;
-          message?: string;
-          requestId?: string;
-          error?: string;
-          fields?: Record<string, unknown>;
-          ts?: string;
-        };
-        await getPool().query(
-          `INSERT INTO logs (service_id, level, message, request_id, trace_id, error, fields, ts)
+    handler: async (envelope, ctx) =>
+      processEvent('ingestor', envelope.eventId, async () => {
+        if (ctx.topic === Topics.telemetry) {
+          const samples = extractSamples(envelope.payload);
+          for (const s of samples) {
+            await query(
+              `INSERT INTO metrics (service_id, metric, value, labels, ts) VALUES ($1,$2,$3,$4,$5)`,
+              [envelope.service, s.metric, s.value, JSON.stringify(s.labels ?? {}), s.ts]
+            );
+            mMetrics.inc();
+          }
+          // Republish normalized samples for any metrics.events consumer.
+          if (samples.length > 0) {
+            await enqueueEvent(
+              Topics.metrics,
+              makeEnvelope({
+                type: EventType.METRIC_SAMPLE,
+                service: envelope.service,
+                payload: { samples },
+              })
+            );
+          }
+        } else if (ctx.topic === Topics.logs) {
+          const p = LogRecordSchema.parse(envelope.payload);
+          await query(
+            `INSERT INTO logs (service_id, level, message, request_id, trace_id, error, fields, ts)
            VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
-          [
-            envelope.service,
-            p.level ?? 'INFO',
-            p.message ?? '',
-            p.requestId ?? null,
-            envelope.traceId ?? null,
-            p.error ?? null,
-            JSON.stringify(p.fields ?? {}),
-            p.ts ?? new Date().toISOString(),
-          ]
-        );
-        mLogs.inc();
-      }
-    },
+            [
+              envelope.service,
+              p.level ?? 'INFO',
+              p.message ?? '',
+              p.requestId ?? null,
+              envelope.traceId ?? null,
+              p.error ?? null,
+              JSON.stringify(p.fields ?? {}),
+              p.ts ?? new Date().toISOString(),
+            ]
+          );
+          mLogs.inc();
+        }
+      }),
   });
 
   const shutdown = async (sig: string) => {
     log.info({ sig }, 'shutting down');
     await consumer.stop();
+    await stopOutbox();
     await producer.disconnect();
     await health.close();
     await closePool();

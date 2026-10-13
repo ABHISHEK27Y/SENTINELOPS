@@ -1,16 +1,21 @@
+import { hostname } from 'node:os';
+
 import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
 import websocket from '@fastify/websocket';
 import Fastify from 'fastify';
+import { Registry, collectDefaultMetrics, Histogram, Counter } from 'prom-client';
 
 import { getLlmProvider } from '@sentinelops/ai';
 import { getEnv } from '@sentinelops/config';
-import { closePool } from '@sentinelops/db';
+import { closePool, up, query, startOutbox } from '@sentinelops/db';
 import { EventConsumer, EventProducer } from '@sentinelops/kafka';
 import { createLogger } from '@sentinelops/logger';
-import { Topics } from '@sentinelops/shared-types';
+import { Topics, type TopicName, type EventEnvelope } from '@sentinelops/shared-types';
 
 import { seedUsers, registerAuthRoutes } from './auth.js';
+import { registerEventSocket } from './event-socket.js';
+import { startRemediationWorker } from './remediation-worker.js';
 import { registerFailureRoutes } from './routes/failures.js';
 import { registerIncidentRoutes } from './routes/incidents.js';
 import { registerRemediationRoutes } from './routes/remediation.js';
@@ -24,7 +29,9 @@ const env = getEnv();
 /** Parse CORS_ORIGIN env var (comma-separated) or default to localhost for dev. */
 function corsOrigin(): string | string[] | boolean {
   const raw = process.env['CORS_ORIGIN']?.trim();
-  if (!raw) return true; // dev: allow all
+  if (!raw) return env.CORS_ORIGIN.split(',').map(s => s.trim());
+  if (raw === '*' && env.NODE_ENV === 'production' && !env.DEMO_MODE)
+    throw new Error('production CORS requires explicit origins');
   if (raw === '*') return true;
   return raw
     .split(',')
@@ -33,43 +40,84 @@ function corsOrigin(): string | string[] | boolean {
 }
 
 async function main(): Promise<void> {
+  if (
+    env.NODE_ENV === 'production' &&
+    !env.DEMO_MODE &&
+    (env.JWT_SECRET.length < 32 || /change.me|dev.only/i.test(env.JWT_SECRET))
+  ) {
+    throw new Error('production API requires a strong explicit JWT_SECRET');
+  }
+  await up();
   const app = Fastify({ logger: false });
   await app.register(cors, { origin: corsOrigin(), credentials: true });
   await app.register(jwt, { secret: env.JWT_SECRET, sign: { expiresIn: env.JWT_EXPIRES_IN } });
   await app.register(websocket);
 
-  // Seed default users (best-effort — needs migrations applied).
-  try {
-    await seedUsers();
-  } catch (err) {
-    log.warn({ err: (err as Error).message }, 'user seeding skipped (run db:migrate?)');
-  }
+  await seedUsers();
 
   const retriever = await buildRunbookRetriever();
   const provider = getLlmProvider();
   log.info({ llm: provider.name, runbookChunks: retriever.size() }, 'ai + rag ready');
 
-  const producer = new EventProducer({ logger: log.child({ mod: 'producer' }) });
+  const producer = new EventProducer({ strict: true, logger: log.child({ mod: 'producer' }) });
   await producer.connect();
+  const stopOutbox = startOutbox(
+    (topic, envelope, key) => producer.send(topic as TopicName, envelope as EventEnvelope, key),
+    err => log.error({ err }, 'outbox dispatch failed')
+  );
+  const stopWorker = startRemediationWorker(err =>
+    log.error({ err }, 'remediation worker retrying after failure')
+  );
+
+  const registry = new Registry();
+  registry.setDefaultLabels({ service: 'api' });
+  collectDefaultMetrics({ register: registry });
+  const requests = new Counter({
+    name: 'api_requests_total',
+    help: 'Platform requests',
+    labelNames: ['route', 'status'],
+    registers: [registry],
+  });
+  const latency = new Histogram({
+    name: 'api_request_duration_seconds',
+    help: 'Platform request duration',
+    labelNames: ['route'],
+    registers: [registry],
+  });
+  const starts = new WeakMap<object, number>();
+  app.addHook('onRequest', async req => {
+    starts.set(req, performance.now());
+  });
+  app.addHook('onResponse', async (req, reply) => {
+    const route = req.routeOptions.url ?? 'unmatched';
+    requests.inc({ route, status: String(reply.statusCode) });
+    latency.observe({ route }, (performance.now() - (starts.get(req) ?? performance.now())) / 1000);
+  });
+  app.get('/metrics', async (_req, reply) =>
+    reply.header('Content-Type', registry.contentType).send(await registry.metrics())
+  );
+  app.get('/api/ready', async (_req, reply) => {
+    try {
+      await query('SELECT 1');
+      return { ready: true };
+    } catch {
+      return reply.code(503).send({ ready: false });
+    }
+  });
 
   app.get('/api/health', async () => ({ status: 'ok', service: 'api', llm: provider.name }));
 
   registerAuthRoutes(app);
   registerServiceRoutes(app);
   registerIncidentRoutes(app, retriever, provider);
-  registerRemediationRoutes(app, producer);
+  registerRemediationRoutes(app);
   registerFailureRoutes(app);
 
   // WebSocket: broadcast control-plane events to connected dashboards.
-  const sockets = new Set<{ send: (data: string) => void }>();
-  app.get('/ws', { websocket: true }, socket => {
-    sockets.add(socket);
-    socket.send(JSON.stringify({ type: 'hello', ts: new Date().toISOString() }));
-    socket.on('close', () => sockets.delete(socket));
-  });
+  const broadcast = registerEventSocket(app, corsOrigin());
 
   const wsConsumer = new EventConsumer({
-    groupId: `api-ws-${process.pid}`,
+    groupId: `api-ws-${process.env['API_INSTANCE_ID'] ?? hostname()}-${PORT}`,
     dlqProducer: producer,
     logger: log.child({ mod: 'ws' }),
   });
@@ -83,13 +131,7 @@ async function main(): Promise<void> {
           payload: envelope.payload,
           ts: envelope.timestamp,
         });
-        for (const s of sockets) {
-          try {
-            s.send(msg);
-          } catch {
-            /* ignore */
-          }
-        }
+        broadcast(msg);
       },
     })
     .catch(err => log.warn({ err: (err as Error).message }, 'ws consumer not started'));
@@ -100,6 +142,8 @@ async function main(): Promise<void> {
   const shutdown = async (sig: string) => {
     log.info({ sig }, 'shutting down');
     await wsConsumer.stop().catch(() => undefined);
+    await stopWorker();
+    await stopOutbox();
     await producer.disconnect();
     await app.close();
     await closePool();

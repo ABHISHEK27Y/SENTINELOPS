@@ -31,9 +31,10 @@ describe('backoff', () => {
 describe('InMemoryIdempotencyStore', () => {
   it('marks first occurrence new and subsequent ones duplicate', async () => {
     const store = new InMemoryIdempotencyStore();
-    expect(await store.markIfNew('e1')).toBe(true);
-    expect(await store.markIfNew('e1')).toBe(false);
-    expect(await store.markIfNew('e2')).toBe(true);
+    expect(await store.hasProcessed('e1')).toBe(false);
+    await store.markProcessed('e1');
+    expect(await store.hasProcessed('e1')).toBe(true);
+    expect(await store.hasProcessed('e2')).toBe(false);
   });
 });
 

@@ -34,16 +34,15 @@ exporters:
     resource_to_telemetry_conversion:
       enabled: true
     # Enable exemplars for metric-to-trace correlation
-    exemplars:
-      enabled: true
+    enable_open_metrics: true
   # Logs → Loki for log aggregation
   loki:
-    endpoint: http://loki:3100/api/v1/push
-    tenant_id: 'sentinelops'
-    labels:
-      resource:
-        service.name:
-        service.namespace:
+    endpoint: http://loki:3100/loki/api/v1/push
+    default_labels_enabled:
+      exporter: true
+      job: true
+      instance: true
+      level: true
   # Logs → collector stdout (viewable via docker logs) for the demo.
   debug:
     verbosity: normal

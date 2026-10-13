@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@sentinelops/config": "*",
+    "@sentinelops/db": "*",
     "@sentinelops/detection": "*",
     "@sentinelops/kafka": "*",
     "@sentinelops/logger": "*",

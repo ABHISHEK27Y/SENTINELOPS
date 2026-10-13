@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, type ReactNode } from 'react';
+
 import { useAuth } from '@/lib/store';
 
 const NAV = [
@@ -14,7 +15,7 @@ const NAV = [
 ];
 
 export function Shell({ children }: { children: ReactNode }) {
-  const { token, user, hydrate, logout } = useAuth();
+  const { token, user, hydrated, hydrate, logout } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
 
@@ -23,12 +24,8 @@ export function Shell({ children }: { children: ReactNode }) {
   }, [hydrate]);
 
   useEffect(() => {
-    // After hydration, redirect to login if unauthenticated.
-    const id = setTimeout(() => {
-      if (!useAuth.getState().token) router.replace('/login');
-    }, 50);
-    return () => clearTimeout(id);
-  }, [router]);
+    if (hydrated && !token) router.replace('/login');
+  }, [hydrated, token, router]);
 
   if (!token) {
     return <div className="min-h-screen grid place-items-center text-muted">Loading…</div>;

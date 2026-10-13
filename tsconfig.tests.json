@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "allowJs": true },
+  "include": [
+    "packages/**/*.ts",
+    "apps/api/**/*.ts",
+    "services/**/*.ts",
+    "control-plane/**/*.ts",
+    "scripts/**/*.ts"
+  ],
+  "exclude": ["node_modules", "dist"]
+}

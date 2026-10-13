@@ -10,7 +10,7 @@ export function buildPaymentService(): ServiceContext {
     dbBaselineMs: 30,
     redisBaselineMs: 3,
   });
-  const { app, faults, simulateDbQuery, simulateRedisOp } = svc;
+  const { app, simulateDbQuery, simulateRedisOp } = svc;
 
   app.post<{ Body: { orderId?: string; amount?: number } }>('/charge', async (req, reply) => {
     const orderId = req.body?.orderId ?? crypto.randomUUID();
@@ -25,14 +25,6 @@ export function buildPaymentService(): ServiceContext {
 
     // Persist the charge (the hot DB path that saturates under db_latency).
     const dbLatency = await simulateDbQuery();
-
-    // Injected/killed errors surface as real 500s that Prometheus counts.
-    if (Math.random() < faults.errorProbability()) {
-      return reply.code(500).send({
-        error: 'payment processing failed',
-        reason: faults.isKilled() ? 'service_killed' : 'downstream_error',
-      });
-    }
 
     return reply.send({
       status: 'charged',

@@ -11,3 +11,4 @@ coverage/
 build/
 *.lock
 package-lock.json
+apps/web/next-env.d.ts

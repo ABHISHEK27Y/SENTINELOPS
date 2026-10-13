@@ -1,0 +1,31 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: sentinelops
+resources:
+  - infrastructure/kubernetes/00-namespace.yaml
+  - infrastructure/kubernetes/01-config.yaml
+  - infrastructure/kubernetes/02-data.yaml
+  - infrastructure/kubernetes/03-kafka.yaml
+  - infrastructure/kubernetes/04-apps.yaml
+  - infrastructure/kubernetes/05-web-ingress.yaml
+  - infrastructure/kubernetes/06-monitoring.yaml
+generatorOptions:
+  disableNameSuffixHash: true
+configMapGenerator:
+  - name: prometheus-config
+    files: [prometheus.yml=monitoring/prometheus/prometheus.yml]
+  - name: prometheus-alerts
+    files: [sentinelops.yml=monitoring/prometheus/alerts/sentinelops.yml]
+  - name: otel-config
+    files: [config.yaml=monitoring/otel/otel-collector-config.yaml]
+  - name: loki-config
+    files: [config.yaml=monitoring/loki/local-config.yaml]
+  - name: alertmanager-config
+    files: [alertmanager.yml=monitoring/alertmanager/alertmanager.yml]
+  - name: grafana-datasources
+    files: [sentinelops.yml=monitoring/grafana/provisioning/datasources/sentinelops.yml]
+  - name: grafana-providers
+    files: [sentinelops.yml=monitoring/grafana/provisioning/dashboards/sentinelops.yml]
+  - name: grafana-dashboards
+    files:
+      - monitoring/grafana/dashboards/sentinelops-overview.json

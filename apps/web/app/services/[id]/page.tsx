@@ -1,5 +1,6 @@
 'use client';
-import { use } from 'react';
+import { useParams } from 'next/navigation';
+
 import { Shell } from '@/components/Shell';
 import { Card, HealthBadge, SeverityBadge } from '@/components/StatusBadge';
 import { useApi } from '@/lib/useApi';
@@ -23,8 +24,8 @@ interface Detail {
   }[];
 }
 
-export default function ServiceDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+export default function ServiceDetailPage() {
+  const { id } = useParams<{ id: string }>();
   const { data, error } = useApi<Detail>(`/api/services/${id}`);
   if (error)
     return (

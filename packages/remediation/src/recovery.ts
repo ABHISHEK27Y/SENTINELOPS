@@ -4,10 +4,14 @@
  * incident is resolved (see ARCHITECTURE §13). If not, the incident loops back to
  * MITIGATION_REQUIRED rather than resolving.
  */
+import { METRIC_NOISE_FLOORS } from '@sentinelops/shared-types';
+
 export interface MetricObservation {
   metric: string;
   observed: number;
   baseline: number;
+  /** Request traffic must return near baseline; latency/error gauges may improve. */
+  direction?: 'lower' | 'range';
 }
 
 export interface RecoveryCheck extends MetricObservation {
@@ -30,12 +34,30 @@ export function evaluateRecovery(
   opts: RecoveryOptions = {}
 ): RecoveryResult {
   const tolerance = opts.tolerance ?? 1.5;
+  if (!Number.isFinite(tolerance) || tolerance < 1) {
+    throw new RangeError('Recovery tolerance must be finite and at least 1');
+  }
   const checks = observations.map((o): RecoveryCheck => {
-    // "Lower is better" metrics: recovered when observed ≤ baseline * tolerance.
-    const threshold = Math.max(o.baseline * tolerance, o.baseline + 1e-9);
-    return { ...o, passed: o.observed <= threshold };
+    const threshold = Math.max(
+      o.baseline * tolerance,
+      o.baseline + (METRIC_NOISE_FLOORS[o.metric] ?? 1e-9)
+    );
+    const direction = o.direction ?? (o.metric === 'request_rate' ? 'range' : 'lower');
+    const passed =
+      Number.isFinite(o.observed) &&
+      Number.isFinite(o.baseline) &&
+      o.observed >= 0 &&
+      o.baseline >= 0 &&
+      o.observed <= threshold &&
+      (direction !== 'range' || o.observed >= o.baseline / tolerance);
+    return { ...o, passed };
   });
-  return { recovered: checks.every(c => c.passed), checks };
+  return {
+    recovered:
+      checks.length > 0 &&
+      checks.every(c => Number.isFinite(c.observed) && Number.isFinite(c.baseline) && c.passed),
+    checks,
+  };
 }
 
 /**

@@ -20,7 +20,8 @@ export class EventProducer {
     const kafka = opts.kafka ?? createKafka();
     this.producer = kafka.producer({
       allowAutoTopicCreation: true,
-      idempotent: false,
+      idempotent: true,
+      maxInFlightRequests: 1,
     });
     this.log = opts.logger ?? createLogger({ service: 'kafka-producer' });
   }

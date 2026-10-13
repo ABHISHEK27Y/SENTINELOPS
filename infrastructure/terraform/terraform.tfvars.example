@@ -2,7 +2,9 @@
 region             = "us-east-1"
 environment        = "staging"
 cluster_name       = "sentinelops"
-kubernetes_version = "1.30"
+# Supply currently supported versions; do not copy expired historical defaults.
+# kubernetes_version = "..."
+# kafka_version = "..."
 node_instance_type = "t3.large"
 node_desired_size  = 3
 db_instance_class  = "db.t3.medium"

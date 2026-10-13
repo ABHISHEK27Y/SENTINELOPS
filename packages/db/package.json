@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@sentinelops/config": "*",
-    "@sentinelops/logger": "*",
+    "@sentinelops/shared-types": "*",
     "pg": "^8.13.1"
   },
   "devDependencies": {

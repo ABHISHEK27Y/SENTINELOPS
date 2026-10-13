@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { buildInvestigation, type InvestigationContext } from './investigator.js';
 import { buildPostmortem } from './postmortem.js';
@@ -52,6 +52,31 @@ const ctx: InvestigationContext = {
 };
 
 describe('buildInvestigation', () => {
+  it('includes retrieved context and only renders validated evidence selections', async () => {
+    const complete = vi
+      .fn()
+      .mockResolvedValue(
+        '{"evidenceIds":["E1"],"runbookIds":["R1"],"summary":"fabricated outage on unknown-host"}'
+      );
+    const inv = await buildInvestigation(ctx, { name: 'remote', complete });
+    expect(complete.mock.calls[0]?.[0][1].content).toContain('increase pool size');
+    expect(inv.summary).toContain('[E1]');
+    expect(inv.summary).toContain('[R1] Database Troubleshooting');
+    expect(inv.summary).not.toContain('unknown-host');
+  });
+  it.each([
+    'not json',
+    '{"evidenceIds":["E999"],"runbookIds":[]}',
+    '{"evidenceIds":[],"runbookIds":["R999"]}',
+  ])(
+    'falls back to collected evidence for malformed or fabricated selection %s',
+    async response => {
+      const inv = await buildInvestigation(ctx, { name: 'remote', complete: async () => response });
+      expect(inv.summary).toContain('INC-1042');
+      expect(inv.summary).not.toContain('999');
+      expect(inv.evidence[0]).toContain('db_query_latency_ms');
+    }
+  );
   it('produces a grounded, evidence-referencing investigation', async () => {
     const inv = await buildInvestigation(ctx, new MockProvider());
     expect(inv.summary).toContain('INC-1042');

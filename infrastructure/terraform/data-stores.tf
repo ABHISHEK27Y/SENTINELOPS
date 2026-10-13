@@ -20,6 +20,9 @@ resource "aws_db_instance" "postgres" {
   storage_encrypted      = true
   skip_final_snapshot    = var.environment != "production"
   deletion_protection    = var.environment == "production"
+  backup_retention_period = var.environment == "production" ? 14 : 7
+  final_snapshot_identifier = "${var.cluster_name}-postgres-final"
+  publicly_accessible = false
   # pgvector: enable the extension via a migration after provisioning
   # (RDS Postgres 16 ships pgvector as an available extension).
 }
@@ -41,14 +44,14 @@ resource "aws_elasticache_replication_group" "redis" {
   subnet_group_name          = aws_elasticache_subnet_group.redis.name
   security_group_ids         = [aws_security_group.data_access.id]
   at_rest_encryption_enabled = true
-  transit_encryption_enabled = false
+  transit_encryption_enabled = true
   port                       = 6379
 }
 
 # ── MSK (Kafka) ─────────────────────────────────────────────────────────
 resource "aws_msk_cluster" "kafka" {
   cluster_name           = "${var.cluster_name}-kafka"
-  kafka_version          = "3.6.0"
+  kafka_version          = var.kafka_version
   number_of_broker_nodes = 3
 
   broker_node_group_info {
@@ -62,7 +65,7 @@ resource "aws_msk_cluster" "kafka" {
 
   encryption_info {
     encryption_in_transit {
-      client_broker = "TLS_PLAINTEXT"
+      client_broker = "TLS"
       in_cluster    = true
     }
   }

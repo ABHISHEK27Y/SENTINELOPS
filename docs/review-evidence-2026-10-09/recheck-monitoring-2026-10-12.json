@@ -1,0 +1,13 @@
+{
+  "prometheusTargets": 13,
+  "prometheusUp": 13,
+  "jaegerServices": [
+    "order-service",
+    "api-gateway",
+    "user-service",
+    "notification-service",
+    "payment-service",
+    "jaeger-all-in-one"
+  ],
+  "lokiReady": "ready\n"
+}

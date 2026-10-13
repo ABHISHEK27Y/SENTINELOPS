@@ -1,48 +1,33 @@
-# Terraform — AWS infrastructure
+# AWS infrastructure scaffold
 
-Provisions the AWS foundation for a production SentinelOps deployment:
+Terraform describes VPC/EKS, private RDS PostgreSQL, Redis and MSK. It has not been
+provider-validated or planned on the repair host because Terraform is absent.
+The CI infrastructure job now initializes providers without a backend and validates
+source. No AWS resources were provisioned during repairs.
 
-| Resource | Purpose |
-| --- | --- |
-| VPC (3 AZs, public+private subnets, NAT) | Network isolation |
-| EKS (managed node group) | Runs the `kubernetes/` workloads |
-| RDS PostgreSQL 16 | Incidents, telemetry, pgvector RAG store |
-| ElastiCache Redis 7 | Cache + Kafka idempotency store |
-| MSK (Kafka 3.6) | Event bus |
-| Security groups | Scope data-store access to EKS nodes only |
+Supply `db_password` (at least 24 characters), an EKS-supported `kubernetes_version`
+and an MSK-supported `kafka_version` for the chosen region. Historical version
+defaults have been removed. The EKS API is private by default; an administrator
+needs VPC access or explicit narrow `cluster_public_access_cidrs`.
 
-Data stores live in **private** subnets and are reachable only from the EKS node
-security group — nothing is internet-exposed.
-
-## Usage
+Redis transport encryption is enabled: wire the application URL as `rediss://...`.
+MSK outputs TLS brokers; set `KAFKA_SSL=true`. Set the PostgreSQL connection to use
+validated server TLS for the managed endpoint. Enable pgvector through migrations.
+Database credentials remain sensitive Terraform state: use an encrypted, restricted
+remote backend with locking, as illustrated by `backend.tf.example`. Initialize
+and review that backend separately; it is not provisioned by this scaffold.
 
 ```bash
 cd infrastructure/terraform
-cp terraform.tfvars.example terraform.tfvars   # edit as needed
-export TF_VAR_db_password='<a strong password>'
-
-terraform init      # downloads providers + VPC/EKS modules
-terraform plan      # review the plan (no cost yet)
-terraform apply     # provision (incurs AWS charges)
-
-# Point kubectl at the new cluster:
-$(terraform output -raw configure_kubectl)
-
-# Then deploy the app (see ../kubernetes), wiring the k8s Secret's
-# DATABASE_URL / REDIS_URL / KAFKA_BROKERS to the terraform outputs:
-terraform output postgres_endpoint
-terraform output redis_endpoint
-terraform output kafka_bootstrap_brokers
+# Copy/edit terraform.tfvars.example, supply secrets outside version control.
+terraform init
+terraform validate
+terraform plan
 ```
 
-## Cost note
-
-`terraform plan` is free. `apply` creates chargeable resources (EKS, RDS, MSK, NAT).
-The defaults use small instance classes and a single NAT gateway to keep costs modest;
-raise `multi_az`, node counts, and NAT-per-AZ for production HA. Run
-`terraform destroy` to tear everything down.
-
-## Not required for local development
-
-Local dev uses `docker compose` (root) or `kind`/`minikube` (../kubernetes). This
-Terraform is only for a real AWS deployment.
+A reviewed plan and separate authorization precede any chargeable apply. Production
+application deployment still needs release images, a production Kubernetes overlay,
+external secrets, operator provisioning, monitoring access controls and tested
+backup/restore. The root Kustomize bundle is an isolated local demo and must not be
+applied to production. Provider lockfile/version support and formatting remain
+checks to complete using Terraform; do not treat this scaffold as AWS-ready.

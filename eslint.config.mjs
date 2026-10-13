@@ -8,7 +8,9 @@ export default tseslint.config(
       'node_modules',
       'dist',
       '**/*.d.ts',
-      'apps/web/**',
+      '**/.next/**',
+      'coverage/**',
+      'tmp/**',
       'eslint.config.js',
       'eslint.config.mjs',
     ],
@@ -20,6 +22,7 @@ export default tseslint.config(
     files: ['**/*.ts', '**/*.tsx', '**/*.mjs'],
     languageOptions: {
       globals: {
+        globalThis: 'readonly',
         process: 'readonly',
         console: 'readonly',
         Buffer: 'readonly',
@@ -29,6 +32,20 @@ export default tseslint.config(
         require: 'readonly',
         exports: 'readonly',
         global: 'readonly',
+        window: 'readonly',
+        document: 'readonly',
+        localStorage: 'readonly',
+        sessionStorage: 'readonly',
+        fetch: 'readonly',
+        alert: 'readonly',
+        WebSocket: 'readonly',
+        AbortController: 'readonly',
+        Headers: 'readonly',
+        RequestInit: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+        setInterval: 'readonly',
+        clearInterval: 'readonly',
       },
       parserOptions: {
         ecmaVersion: 'latest',
@@ -68,6 +85,7 @@ export default tseslint.config(
         {
           devDependencies: [
             '**/*.test.ts',
+            '**/*.test.tsx',
             '**/*.spec.ts',
             '**/vitest.config.*',
             '**/eslint.config.*',
@@ -87,7 +105,7 @@ export default tseslint.config(
   },
   // Allow vitest in test files
   {
-    files: ['**/*.test.ts', '**/*.spec.ts'],
+    files: ['**/*.test.ts', '**/*.test.tsx', '**/*.spec.ts'],
     rules: {
       'import/no-extraneous-dependencies': 'off',
     },

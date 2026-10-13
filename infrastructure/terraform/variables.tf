@@ -21,8 +21,13 @@ variable "cluster_name" {
 }
 
 variable "kubernetes_version" {
+  description = "Select an EKS-supported Kubernetes version for the target region at deployment time."
   type    = string
-  default = "1.30"
+}
+
+variable "kafka_version" {
+  description = "Select an MSK-supported Kafka version at deployment time."
+  type = string
 }
 
 variable "node_instance_type" {
@@ -44,7 +49,20 @@ variable "db_password" {
   description = "RDS master password (supply via TF_VAR_db_password / secrets manager)"
   type        = string
   sensitive   = true
-  default     = "change_me_in_production"
+  validation {
+    condition     = length(var.db_password) >= 24 && !strcontains(lower(var.db_password), "change_me")
+    error_message = "Supply a unique database password of at least 24 characters."
+  }
+}
+
+variable "cluster_public_access_cidrs" {
+  description = "Optional administrator CIDRs for the EKS public API; empty keeps it private."
+  type        = list(string)
+  default     = []
+  validation {
+    condition     = alltrue([for cidr in var.cluster_public_access_cidrs : can(cidrnetmask(cidr)) && cidr != "0.0.0.0/0"])
+    error_message = "Use explicit administrator IPv4 CIDRs, never the whole Internet."
+  }
 }
 
 variable "redis_node_type" {

@@ -22,8 +22,7 @@
     "packages/*/src/**/*.ts",
     "services/*/src/**/*.ts",
     "control-plane/*/src/**/*.ts",
-    "apps/api/src/**/*.ts",
-    "apps/web/**/*.ts"
+    "apps/api/src/**/*.ts"
   ],
   "exclude": ["**/node_modules", "**/dist", "**/*.test.ts"]
 }

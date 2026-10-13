@@ -1,4 +1,4 @@
-# Shared configuration + secrets for all SentinelOps pods.
+# LOCAL DEMO configuration. Never apply this file to a production cluster.
 # ⚠️ PRODUCTION: DO NOT COMMIT REAL SECRETS!
 # Use External Secrets Operator (https://external-secrets.io/) to sync from:
 #   - AWS Secrets Manager
@@ -45,6 +45,8 @@ metadata:
   namespace: sentinelops
 data:
   NODE_ENV: 'production'
+  DEMO_MODE: 'true'
+  CORS_ORIGIN: 'http://sentinelops.local'
   LOG_LEVEL: 'info'
   OTEL_EXPORTER_OTLP_ENDPOINT: 'http://otel-collector:4318'
   OTEL_SERVICE_NAMESPACE: 'sentinelops'
@@ -68,6 +70,7 @@ stringData:
   DATABASE_URL: 'postgresql://sentinel:CHANGE_ME@postgres:5432/sentinelops'
   REDIS_URL: 'redis://redis:6379'
   JWT_SECRET: 'CHANGE_ME_IN_PRODUCTION_USE_EXTERNAL_SECRETS'
+  INTERNAL_API_TOKEN: 'sentinelops-isolated-local-demo-token-2026'
   POSTGRES_USER: 'sentinel'
   POSTGRES_PASSWORD: 'CHANGE_ME'
   POSTGRES_DB: 'sentinelops'

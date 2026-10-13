@@ -23,10 +23,12 @@ export async function startTelemetry(serviceName: string): Promise<void> {
       await import('@opentelemetry/auto-instrumentations-node');
     const { OTLPTraceExporter } = await import('@opentelemetry/exporter-trace-otlp-http');
     const { OTLPMetricExporter } = await import('@opentelemetry/exporter-metrics-otlp-http');
+    const { OTLPLogExporter } = await import('@opentelemetry/exporter-logs-otlp-http');
+    const { BatchLogRecordProcessor } = await import('@opentelemetry/sdk-logs');
     const { PeriodicExportingMetricReader } = await import('@opentelemetry/sdk-metrics');
-    const { Resource } = await import('@opentelemetry/resources');
+    const { resourceFromAttributes } = await import('@opentelemetry/resources');
 
-    const resource = new Resource({
+    const resource = resourceFromAttributes({
       'service.name': serviceName,
       'service.namespace': env.OTEL_SERVICE_NAMESPACE,
       'deployment.environment': env.NODE_ENV,
@@ -45,11 +47,20 @@ export async function startTelemetry(serviceName: string): Promise<void> {
     const sdk = new NodeSDK({
       resource,
       traceExporter,
-      metricReader,
+      metricReaders: [metricReader],
+      logRecordProcessors: [
+        new BatchLogRecordProcessor({
+          exporter: new OTLPLogExporter({
+            url: `${env.OTEL_EXPORTER_OTLP_ENDPOINT}/v1/logs`,
+          }),
+        }),
+      ],
       instrumentations: [
         getNodeAutoInstrumentations({
           // fs instrumentation is noisy; disable it.
           '@opentelemetry/instrumentation-fs': { enabled: false },
+          // The redacted logger sink exports explicitly, including under tsx ESM.
+          '@opentelemetry/instrumentation-pino': { disableLogSending: true },
         }),
       ],
     });
@@ -66,8 +77,10 @@ export async function startTelemetry(serviceName: string): Promise<void> {
 
 export async function stopTelemetry(): Promise<void> {
   if (shutdownFn) {
+    const shutdown = shutdownFn;
+    shutdownFn = null;
     try {
-      await shutdownFn();
+      await shutdown();
     } catch {
       /* ignore */
     }

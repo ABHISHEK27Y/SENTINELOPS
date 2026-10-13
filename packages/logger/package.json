@@ -8,6 +8,7 @@
   },
   "types": "./src/index.ts",
   "dependencies": {
+    "@opentelemetry/api-logs": "^0.223.0",
     "pino": "^9.5.0"
   }
 }

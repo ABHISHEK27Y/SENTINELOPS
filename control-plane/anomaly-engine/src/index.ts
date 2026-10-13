@@ -7,6 +7,15 @@
 import { Registry, Counter, Histogram, collectDefaultMetrics } from 'prom-client';
 
 import { getEnv } from '@sentinelops/config';
+import {
+  up,
+  query,
+  processEvent,
+  withPipelineState,
+  enqueueEvent,
+  startOutbox,
+  closePool,
+} from '@sentinelops/db';
 import { AnomalyDetector, type Sample } from '@sentinelops/detection';
 import { EventConsumer, EventProducer, RedisIdempotencyStore } from '@sentinelops/kafka';
 import { createLogger } from '@sentinelops/logger';
@@ -17,6 +26,8 @@ import {
   makeEnvelope,
   type Anomaly,
   type MetricSample,
+  type EventEnvelope,
+  type TopicName,
 } from '@sentinelops/shared-types';
 
 const PORT = Number(process.env['ANOMALY_ENGINE_PORT'] ?? 8091);
@@ -46,8 +57,7 @@ const mLatency = new Histogram({
 });
 
 // ── Detection + Kafka ───────────────────────────────────────────────────
-const detector = new AnomalyDetector();
-const producer = new EventProducer({ logger: log.child({ mod: 'producer' }) });
+const producer = new EventProducer({ strict: true, logger: log.child({ mod: 'producer' }) });
 const consumer = new EventConsumer({
   groupId: 'anomaly-engine',
   idempotency: new RedisIdempotencyStore({ url: env.REDIS_URL, prefix: 'idem:anomaly' }),
@@ -70,7 +80,13 @@ function extractSamples(service: string, payload: unknown): Sample[] {
   const out: Sample[] = [];
   const push = (s: Partial<MetricSample> | undefined) => {
     if (s && typeof s.metric === 'string' && typeof s.value === 'number') {
-      out.push({ service, metric: s.metric, value: s.value, ts: s.ts ?? new Date().toISOString() });
+      out.push({
+        service,
+        metric: s.metric,
+        value: s.value,
+        ts: s.ts ?? new Date().toISOString(),
+        instance: s.labels?.['instance'] ?? 'default',
+      });
     }
   };
   if (payload && typeof payload === 'object') {
@@ -82,54 +98,68 @@ function extractSamples(service: string, payload: unknown): Sample[] {
 }
 
 async function main(): Promise<void> {
+  await up();
   await producer.connect();
+  const stopOutbox = startOutbox(
+    (topic, envelope, key) => producer.send(topic as TopicName, envelope as EventEnvelope, key),
+    err => log.error({ err }, 'outbox dispatch failed')
+  );
   const health = await startHealthServer({
     serviceName: 'anomaly-engine',
     port: PORT,
     registry,
+    ready: async () => consumer.isRunning && Boolean((await query('SELECT 1')).rowCount),
   });
   log.info({ port: PORT }, 'anomaly-engine health/metrics up');
 
   await consumer.run({
-    topics: [Topics.telemetry, Topics.metrics],
-    handler: async envelope => {
-      const samples = extractSamples(envelope.service, envelope.payload);
-      for (const sample of samples) {
-        const end = mLatency.startTimer();
-        const anomaly: Anomaly | null = detector.detect(sample);
-        end();
-        mSamples.inc();
-        if (!anomaly) continue;
-        mAnomalies.inc({ service: anomaly.service, severity: anomaly.severity });
-        log.warn(
-          {
-            service: anomaly.service,
-            metric: anomaly.metric,
-            value: Math.round(anomaly.value),
-            baseline: Math.round(anomaly.baseline),
-            score: anomaly.anomalyScore.toFixed(2),
-            severity: anomaly.severity,
-          },
-          'anomaly detected'
-        );
-        await producer.send(
-          Topics.anomaly,
-          makeEnvelope({
-            type: anomalyEventType(anomaly.metric),
-            service: anomaly.service,
-            traceId: envelope.traceId,
-            payload: anomaly,
-          } as { type: string; service: string; traceId?: string; payload: unknown })
-        );
-      }
-    },
+    topics: [Topics.metrics],
+    handler: async envelope =>
+      processEvent('anomaly-engine', envelope.eventId, async () => {
+        await withPipelineState(`detector:${envelope.service}`, async state => {
+          const detector = new AnomalyDetector();
+          detector.restore(state);
+          const samples = extractSamples(envelope.service, envelope.payload);
+          for (const sample of samples) {
+            const started = performance.now();
+            const anomaly: Anomaly | null = detector.detect(sample);
+            mLatency.observe(performance.now() - started);
+            mSamples.inc();
+            if (!anomaly) continue;
+            mAnomalies.inc({ service: anomaly.service, severity: anomaly.severity });
+            log.warn(
+              {
+                service: anomaly.service,
+                metric: anomaly.metric,
+                value: Math.round(anomaly.value),
+                baseline: Math.round(anomaly.baseline),
+                score: anomaly.anomalyScore.toFixed(2),
+                severity: anomaly.severity,
+              },
+              'anomaly detected'
+            );
+            await enqueueEvent(
+              Topics.anomaly,
+              makeEnvelope({
+                type: anomalyEventType(anomaly.metric),
+                service: anomaly.service,
+                traceId: envelope.traceId,
+                payload: anomaly,
+              } as { type: string; service: string; traceId?: string; payload: unknown })
+            );
+          }
+          return { state: detector.snapshot(), result: undefined };
+        });
+      }),
   });
 
   const shutdown = async (sig: string) => {
     log.info({ sig }, 'shutting down');
     await consumer.stop();
+    await stopOutbox();
     await producer.disconnect();
     await health.close();
+    await closePool();
     process.exit(0);
   };
   process.on('SIGTERM', () => void shutdown('SIGTERM'));

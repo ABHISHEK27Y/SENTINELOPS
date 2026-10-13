@@ -1,6 +1,6 @@
 import type { DirectedEdge } from '@sentinelops/root-cause';
 
-export interface ServiceInfo {
+interface ServiceInfo {
   id: string;
   displayName: string;
   tier: 'edge' | 'application' | 'data' | 'control';
@@ -39,7 +39,7 @@ const PORT = new Map(SERVICES.map(s => [s.id, s.port]));
 export function serviceBaseUrl(service: string): string {
   const port = PORT.get(service);
   if (!port) return '';
-  const host = process.env.NODE_ENV === 'production' ? service : '127.0.0.1';
+  const host = process.env['NODE_ENV'] === 'production' ? service : '127.0.0.1';
   return `http://${host}:${port}`;
 }
 

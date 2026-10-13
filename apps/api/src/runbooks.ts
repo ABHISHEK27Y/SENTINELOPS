@@ -2,7 +2,8 @@ import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { chunkMarkdown, embedChunks, getEmbedder, InMemoryRetriever } from '@sentinelops/rag';
+import { getEnv } from '@sentinelops/config';
+import { chunkMarkdown, getEmbedder, PostgresRetriever } from '@sentinelops/rag';
 
 /** Resolve docs/runbooks relative to the repo root (or RUNBOOKS_DIR override). */
 function runbooksDir(): string {
@@ -14,27 +15,25 @@ function runbooksDir(): string {
 
 /**
  * Builds the RAG index over the runbook corpus at startup. This is the retrieval
- * side of the RAG pipeline (chunk → embed → in-memory vector store); the pgvector
- * store is the persistent equivalent.
+ * side of the RAG pipeline (chunk → embed → transactional pgvector replacement).
  */
-export async function buildRunbookRetriever(): Promise<InMemoryRetriever> {
+export async function buildRunbookRetriever(): Promise<PostgresRetriever> {
   const embedder = getEmbedder();
-  const retriever = new InMemoryRetriever(embedder);
+  const retriever = new PostgresRetriever(embedder, getEnv().EMBEDDINGS_PROVIDER);
   const dir = runbooksDir();
   if (!existsSync(dir)) return retriever;
 
-  const raw: Array<{ id: string; content: string; metadata: Record<string, unknown> }> = [];
   for (const file of readdirSync(dir).filter(f => f.endsWith('.md'))) {
     const md = readFileSync(path.join(dir, file), 'utf8');
     const title = file.replace(/\.md$/, '').replace(/-/g, ' ');
-    for (const chunk of chunkMarkdown(md)) {
-      raw.push({
-        id: `${file}#${chunk.index}`,
+    await retriever.index(
+      `${getEnv().EMBEDDINGS_PROVIDER}:${file}`,
+      title,
+      chunkMarkdown(md).map(chunk => ({
         content: `${chunk.heading}\n${chunk.content}`,
         metadata: { file, title, heading: chunk.heading },
-      });
-    }
+      }))
+    );
   }
-  retriever.add(await embedChunks(embedder, raw));
   return retriever;
 }

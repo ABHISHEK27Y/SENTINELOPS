@@ -13,6 +13,17 @@ export const Severity = {
 } as const;
 export type Severity = (typeof Severity)[keyof typeof Severity];
 
+/** Absolute jitter allowance in each exported metric's units. CPU is a 0..1
+ * fraction; latencies are milliseconds. Faults must exceed ordinary demo noise. */
+export const METRIC_NOISE_FLOORS: Readonly<Record<string, number>> = {
+  cpu_usage: 0.1,
+  queue_depth: 1,
+  request_rate: 2,
+  http_request_duration_ms: 5,
+  db_query_latency_ms: 5,
+  redis_latency_ms: 2,
+};
+
 /** Ordered so numeric comparison reflects escalation. */
 export const SEVERITY_ORDER: Severity[] = [
   Severity.INFO,
@@ -44,7 +55,7 @@ export const INCIDENT_TRANSITIONS: Record<IncidentStatus, IncidentStatus[]> = {
   INVESTIGATING: ['IDENTIFIED', 'MITIGATION_REQUIRED'],
   IDENTIFIED: ['MITIGATION_REQUIRED', 'REMEDIATING'],
   MITIGATION_REQUIRED: ['REMEDIATING'],
-  REMEDIATING: ['VERIFYING'],
+  REMEDIATING: ['VERIFYING', 'MITIGATION_REQUIRED'],
   VERIFYING: ['RESOLVED', 'MITIGATION_REQUIRED'],
   RESOLVED: ['POSTMORTEM'],
   POSTMORTEM: [],
@@ -122,6 +133,7 @@ export const MetricName = {
 export type MetricName = (typeof MetricName)[keyof typeof MetricName];
 
 export const RemediationActionType = {
+  CLEAR_INJECTED_FAULT: 'clear_injected_fault',
   RESTART_SERVICE: 'restart_service',
   SCALE_SERVICE: 'scale_service',
   CLEAR_CACHE: 'clear_cache',

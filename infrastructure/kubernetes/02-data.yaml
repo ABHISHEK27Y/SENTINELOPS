@@ -1,5 +1,19 @@
 # Postgres (pgvector) + Redis. For local kind/minikube only — in AWS these are
-# RDS + ElastiCache (see infrastructure/terraform).
+# RDS + ElastiCache (see infrastructure/terraform). Requires a default StorageClass.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: { name: postgres-data, namespace: sentinelops }
+spec:
+  accessModes: [ReadWriteOnce]
+  resources: { requests: { storage: 10Gi } }
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: { name: redis-data, namespace: sentinelops }
+spec:
+  accessModes: [ReadWriteOnce]
+  resources: { requests: { storage: 2Gi } }
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -7,6 +21,7 @@ metadata:
   namespace: sentinelops
 spec:
   replicas: 1
+  strategy: { type: Recreate }
   selector: { matchLabels: { app: postgres } }
   template:
     metadata: { labels: { app: postgres } }
@@ -16,6 +31,8 @@ spec:
           image: pgvector/pgvector:pg16
           envFrom:
             - secretRef: { name: sentinelops-secrets }
+          env:
+            - { name: PGDATA, value: /var/lib/postgresql/data/pgdata }
           ports: [{ containerPort: 5432 }]
           readinessProbe:
             exec: { command: ['pg_isready', '-U', 'sentinel', '-d', 'sentinelops'] }
@@ -25,7 +42,7 @@ spec:
             - { name: pgdata, mountPath: /var/lib/postgresql/data }
       volumes:
         - name: pgdata
-          emptyDir: {}
+          persistentVolumeClaim: { claimName: postgres-data }
 ---
 apiVersion: v1
 kind: Service
@@ -41,6 +58,7 @@ metadata:
   namespace: sentinelops
 spec:
   replicas: 1
+  strategy: { type: Recreate }
   selector: { matchLabels: { app: redis } }
   template:
     metadata: { labels: { app: redis } }
@@ -50,10 +68,15 @@ spec:
           image: redis:7-alpine
           args: ['redis-server', '--appendonly', 'yes']
           ports: [{ containerPort: 6379 }]
+          volumeMounts:
+            - { name: redisdata, mountPath: /data }
           readinessProbe:
             exec: { command: ['redis-cli', 'ping'] }
             initialDelaySeconds: 3
             periodSeconds: 5
+      volumes:
+        - name: redisdata
+          persistentVolumeClaim: { claimName: redis-data }
 ---
 apiVersion: v1
 kind: Service

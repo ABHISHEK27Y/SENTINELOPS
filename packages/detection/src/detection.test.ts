@@ -27,6 +27,44 @@ describe('Ewma', () => {
 });
 
 describe('AnomalyDetector', () => {
+  it('retains the healthy baseline across a sustained fault and a restart', () => {
+    const detector = new AnomalyDetector({ minSamples: 3 });
+    const sample = {
+      service: 'payment',
+      metric: 'latency',
+      instance: 'a',
+      ts: new Date().toISOString(),
+      value: 100,
+    };
+    for (let i = 0; i < 3; i++) detector.detect(sample);
+    for (let i = 0; i < 60; i++)
+      expect(detector.detect({ ...sample, value: 2000 })?.baseline).toBe(100);
+    const restarted = new AnomalyDetector({ minSamples: 3 });
+    restarted.restore(detector.snapshot());
+    expect(restarted.detect({ ...sample, value: 2000 })?.baseline).toBe(100);
+    expect(restarted.detect(sample)).toBeNull();
+    expect(restarted.detect({ ...sample, instance: 'b', value: 2000 })).toBeNull();
+  });
+
+  it('rejects invalid input without corrupting a durable baseline', () => {
+    const detector = new AnomalyDetector();
+    detector.detect({ service: 'payment', metric: 'latency', value: NaN, ts: 'invalid' });
+    expect(detector.snapshot()).toEqual({ baselines: {}, latest: {}, pending: {} });
+  });
+  it('does not let late samples alter baselines after restart', () => {
+    const detector = new AnomalyDetector({ minSamples: 3 });
+    const sample = {
+      service: 'payment',
+      metric: 'latency',
+      value: 100,
+      ts: '2026-10-10T10:00:10Z',
+    };
+    detector.detect(sample);
+    const restarted = new AnomalyDetector({ minSamples: 3 });
+    restarted.restore(detector.snapshot());
+    expect(restarted.detect({ ...sample, ts: '2026-10-10T10:00:05Z', value: 2000 })).toBeNull();
+    expect(restarted.snapshot()).toEqual(detector.snapshot());
+  });
   const steady = (d: AnomalyDetector, n: number, base = 100, jitter = 2) => {
     for (let i = 0; i < n; i++) {
       d.detect({

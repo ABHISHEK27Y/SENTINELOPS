@@ -10,7 +10,7 @@
  *  - memory_leak       → a growing buffer actually raises RSS
  *  - break_redis       → simulated Redis ops fail / spike latency
  *  - traffic_spike     → self-generated extra internal load
- *  - kafka_lag         → producer flush is delayed (reported as queue depth)
+ *  - kafka_lag         → simulated request delay and queue depth (not broker lag)
  */
 import { FaultType, type FaultType as FaultTypeT } from '@sentinelops/shared-types';
 
@@ -20,7 +20,7 @@ export interface FaultParams {
   targetMs?: number;
   /** For error_injection: probability 0..1. */
   probability?: number;
-  /** Auto-clear after N ms (0 = manual). */
+  /** Auto-clear after N ms, bounded to 100ms..15min; default five minutes. */
   ttlMs?: number;
 }
 
@@ -36,22 +36,29 @@ export class FaultController {
   private cpuTimer: NodeJS.Timeout | null = null;
   private memTimer: NodeJS.Timeout | null = null;
   private leak: Buffer[] = [];
+  private expiryTimers = new Map<FaultTypeT, NodeJS.Timeout>();
 
   enable(type: FaultTypeT, params: FaultParams = {}): ActiveFault {
+    this.disable(type);
     const now = Date.now();
     const fault: ActiveFault = {
       type,
       params,
       since: now,
-      expiresAt: params.ttlMs && params.ttlMs > 0 ? now + params.ttlMs : null,
+      expiresAt: now + Math.min(Math.max(Number(params.ttlMs) || 300_000, 100), 900_000),
     };
     this.active.set(type, fault);
+    const expiry = setTimeout(() => this.disable(type), fault.expiresAt! - now);
+    expiry.unref();
+    this.expiryTimers.set(type, expiry);
     if (type === FaultType.CPU_STRESS) this.startCpuStress();
     if (type === FaultType.MEMORY_LEAK) this.startMemoryLeak();
     return fault;
   }
 
   disable(type: FaultTypeT): void {
+    clearTimeout(this.expiryTimers.get(type));
+    this.expiryTimers.delete(type);
     this.active.delete(type);
     if (type === FaultType.CPU_STRESS) this.stopCpuStress();
     if (type === FaultType.MEMORY_LEAK) this.stopMemoryLeak();
@@ -114,6 +121,10 @@ export class FaultController {
     const f = this.get(FaultType.KAFKA_LAG);
     if (!f) return 0;
     return typeof f.params.targetMs === 'number' ? f.params.targetMs : 1500;
+  }
+
+  networkBroken(): boolean {
+    return this.get(FaultType.NETWORK_FAILURE) !== undefined;
   }
 
   /**

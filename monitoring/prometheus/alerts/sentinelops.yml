@@ -2,66 +2,6 @@
 # These define SLI-based alerts for the platform
 
 groups:
-  - name: sentinelops.infrastructure
-    interval: 30s
-    rules:
-      # Database
-      - alert: PostgresDown
-        expr: up{job="postgres"} == 0
-        for: 1m
-        labels:
-          severity: critical
-        annotations:
-          summary: 'PostgreSQL is down'
-          description: 'PostgreSQL has been down for more than 1 minute'
-
-      - alert: PostgresHighConnections
-        expr: pg_stat_database_numbackends / pg_settings_max_connections > 0.8
-        for: 5m
-        labels:
-          severity: warning
-        annotations:
-          summary: 'PostgreSQL connection pool near exhaustion'
-          description: 'Connection usage is above 80%'
-
-      # Redis
-      - alert: RedisDown
-        expr: up{job="redis"} == 0
-        for: 1m
-        labels:
-          severity: critical
-        annotations:
-          summary: 'Redis is down'
-          description: 'Redis has been down for more than 1 minute'
-
-      - alert: RedisHighMemory
-        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.9
-        for: 5m
-        labels:
-          severity: warning
-        annotations:
-          summary: 'Redis memory usage high'
-          description: 'Redis memory usage is above 90%'
-
-      # Kafka
-      - alert: KafkaDown
-        expr: up{job="kafka"} == 0
-        for: 1m
-        labels:
-          severity: critical
-        annotations:
-          summary: 'Kafka broker is down'
-          description: 'Kafka broker has been down for more than 1 minute'
-
-      - alert: KafkaHighConsumerLag
-        expr: kafka_consumer_lag > 10000
-        for: 5m
-        labels:
-          severity: warning
-        annotations:
-          summary: 'Kafka consumer lag high'
-          description: 'Consumer lag exceeds 10k messages'
-
   - name: sentinelops.services
     interval: 30s
     rules:
@@ -158,9 +98,9 @@ groups:
 
       - alert: APIHighErrorRate
         expr: |
-          sum(rate(http_requests_total{job="sentinelops-api",status=~"5.."}[5m]))
+          sum(rate(api_requests_total{job="sentinelops-api",status=~"5.."}[5m]))
           /
-          sum(rate(http_requests_total{job="sentinelops-api"}[5m]))
+          sum(rate(api_requests_total{job="sentinelops-api"}[5m]))
           > 0.05
         for: 5m
         labels:

@@ -46,12 +46,30 @@ export class EventConsumer {
   private dlq: EventProducer;
   private backoff: BackoffOptions;
   private log: Logger;
+  private active = false;
+  get isRunning(): boolean {
+    return this.active;
+  }
 
   constructor(private opts: EventConsumerOptions) {
     const kafka = opts.kafka ?? createKafka();
     this.consumer = kafka.consumer({ groupId: opts.groupId });
+    if (this.consumer.events) {
+      this.consumer.on(this.consumer.events.GROUP_JOIN, () => {
+        this.active = true;
+      });
+      for (const event of [
+        this.consumer.events.STOP,
+        this.consumer.events.CRASH,
+        this.consumer.events.DISCONNECT,
+      ]) {
+        this.consumer.on(event, () => {
+          this.active = false;
+        });
+      }
+    }
     this.idempotency = opts.idempotency ?? new InMemoryIdempotencyStore();
-    this.dlq = opts.dlqProducer ?? new EventProducer({ kafka });
+    this.dlq = opts.dlqProducer ?? new EventProducer({ kafka, strict: true });
     this.backoff = opts.backoff ?? DEFAULT_BACKOFF;
     this.log = opts.logger ?? createLogger({ service: `consumer:${opts.groupId}` });
   }
@@ -72,6 +90,7 @@ export class EventConsumer {
     await this.consumer.run({
       eachMessage: payload => this.handleMessage(payload, params.handler),
     });
+    this.active = true;
   }
 
   private async handleMessage(
@@ -91,8 +110,7 @@ export class EventConsumer {
     }
 
     // 2. Idempotency: skip events already processed (redelivery).
-    const isNew = await this.idempotency.markIfNew(envelope.eventId);
-    if (!isNew) {
+    if (await this.idempotency.hasProcessed(envelope.eventId)) {
       this.log.debug({ eventId: envelope.eventId, topic }, 'duplicate skipped');
       return;
     }
@@ -102,6 +120,7 @@ export class EventConsumer {
     for (;;) {
       try {
         await handler(envelope, { topic, partition, attempt });
+        await this.idempotency.markProcessed(envelope.eventId);
         return;
       } catch (err) {
         const msg = (err as Error).message;
@@ -117,6 +136,7 @@ export class EventConsumer {
         }
         // 4. Exhausted retries → dead-letter and move on (offset commits).
         await this.deadLetter(topic, raw, `handler failed after retries: ${msg}`);
+        await this.idempotency.markProcessed(envelope.eventId);
         return;
       }
     }
@@ -124,20 +144,22 @@ export class EventConsumer {
 
   private async deadLetter(originalTopic: string, raw: string, reason: string): Promise<void> {
     this.log.error({ originalTopic, reason }, 'dead-lettering message');
-    await this.dlq.send(Topics.deadletter, {
+    const delivered = await this.dlq.send(Topics.deadletter, {
       eventId: crypto.randomUUID(),
       type: 'DEAD_LETTER',
       timestamp: new Date().toISOString(),
       service: `consumer:${this.opts.groupId}`,
       version: 1,
-      payload: { originalTopic, reason, original: raw.slice(0, 8000) },
+      payload: { originalTopic, reason, original: raw },
     });
+    if (!delivered) throw new Error('dead-letter delivery failed; message must be redelivered');
   }
 
   async stop(): Promise<void> {
+    this.active = false;
     try {
       await this.consumer.disconnect();
-      await this.dlq.disconnect();
+      if (!this.opts.dlqProducer) await this.dlq.disconnect();
       await this.idempotency.close?.();
     } catch {
       /* ignore */

@@ -48,6 +48,50 @@ describe('DependencyGraph.related', () => {
 });
 
 describe('Correlator', () => {
+  it('restores identity, bounds evidence and starts a fresh group after closure', () => {
+    let n = 0;
+    const options = { idGen: () => `corr-${++n}` };
+    const original = new Correlator(graph, options);
+    const first = original.ingest(anomaly('payment-service', 'latency', 100000));
+    for (let i = 1; i < 550; i++)
+      original.ingest(anomaly('payment-service', 'latency', 100000 + i));
+    const restored = new Correlator(graph, options);
+    restored.restore(original.snapshot());
+    expect(restored.ingest(anomaly('payment-service', 'errors', 101000)).correlationId).toBe(
+      first.correlationId
+    );
+    expect(restored.get(first.correlationId)?.anomalies).toHaveLength(500);
+    restored.close(first.correlationId);
+    expect(restored.ingest(anomaly('payment-service', 'latency', 102000)).isNew).toBe(true);
+  });
+  it('rejects substantially older anomalies instead of creating historical incidents', () => {
+    const correlator = new Correlator(graph);
+    const current = correlator.ingest(anomaly('payment-service', 'latency', 200000));
+    expect(() => correlator.ingest(anomaly('payment-service', 'errors', 100000))).toThrow(
+      'lateness'
+    );
+    expect(correlator.get(current.correlationId)?.lastSeen).toBe(200000);
+  });
+  it('preserves its watermark after every group is closed and the process restarts', () => {
+    const original = new Correlator(graph);
+    const group = original.ingest(anomaly('payment-service', 'latency', 200000));
+    original.close(group.correlationId);
+    const restored = new Correlator(graph);
+    restored.restore(original.snapshot());
+    expect(restored.isLate(100000)).toBe(true);
+    expect(restored.openGroups()).toHaveLength(0);
+    expect(() => restored.ingest(anomaly('payment-service', 'errors', 100000))).toThrow('lateness');
+  });
+  it('accepts bounded cross-partition delay and rejects invalid timestamps', () => {
+    const correlator = new Correlator(graph);
+    const current = correlator.ingest(anomaly('payment-service', 'latency', 200000));
+    expect(correlator.ingest(anomaly('payment-service', 'errors', 180000)).correlationId).toBe(
+      current.correlationId
+    );
+    expect(() => correlator.ingest(anomaly('payment-service', 'errors', 200000), NaN)).toThrow(
+      'timestamp'
+    );
+  });
   it('collapses related anomalies in one window into ONE incident', () => {
     let n = 0;
     const c = new Correlator(graph, { windowMs: 60_000, idGen: () => `corr-${++n}` });

@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+
 import { Shell } from '@/components/Shell';
 import { Card, SeverityBadge, StatusBadge } from '@/components/StatusBadge';
 import { useApi } from '@/lib/useApi';

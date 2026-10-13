@@ -1,5 +1,11 @@
 # SentinelOps — System Architecture
 
+Implementation audit, 10 October 2026: this document includes target design and
+historical roadmap entries. Current runtime decisions are recorded in
+[IMPLEMENTED_ARCHITECTURE.md](IMPLEMENTED_ARCHITECTURE.md); acceptance status is in
+[the repair checklist](../FIX_PLAN.md). Python/Isolation Forest, topology discovery,
+real infrastructure execution and AWS readiness are not verified features.
+
 > AI-Powered Distributed Observability & Autonomous Incident Response Platform
 
 This document is the authoritative design reference. It is written **before** the

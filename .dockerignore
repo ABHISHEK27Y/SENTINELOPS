@@ -12,3 +12,6 @@ infrastructure/terraform
 infrastructure/kubernetes
 data
 pgdata
+tmp
+coverage
+.cache

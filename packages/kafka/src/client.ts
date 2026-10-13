@@ -11,6 +11,7 @@ export function createKafka(overrides: Partial<KafkaConfig> = {}): Kafka {
   return new Kafka({
     clientId: env.KAFKA_CLIENT_ID,
     brokers: kafkaBrokers(env),
+    ssl: env.KAFKA_SSL,
     logLevel: logLevel.NOTHING,
     retry: { retries: 5, initialRetryTime: 300 },
     ...overrides,

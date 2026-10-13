@@ -15,6 +15,7 @@ export interface ProposedAction {
 }
 
 const RISK: Record<ActionType, Risk> = {
+  clear_injected_fault: RemediationRisk.LOW,
   increase_connection_pool: RemediationRisk.LOW,
   clear_cache: RemediationRisk.LOW,
   scale_service: RemediationRisk.MEDIUM,

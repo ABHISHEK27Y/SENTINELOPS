@@ -18,6 +18,7 @@ export function buildApiGateway(): ServiceContext {
   const forward = async (url: string, init: RequestInit, requestId?: string): Promise<Response> =>
     fetch(url, {
       ...init,
+      signal: AbortSignal.timeout(8000),
       headers: {
         'content-type': 'application/json',
         ...(init.headers ?? {}),

@@ -37,17 +37,26 @@ export function buildNotificationService(): ServiceContext {
   );
 
   // Background worker drains the queue (~20 notifications/sec when Redis is up).
-  const worker = setInterval(async () => {
-    if (pending === 0) return;
-    try {
-      await simulateRedisOp(); // dequeue
-      pending = Math.max(0, pending - 1);
-      metrics.queueDepth.set(pending);
-    } catch {
-      // Redis broken: the queue backs up (depth stays high) — the saturation signal.
-    }
+  let draining: Promise<void> | null = null;
+  const worker = setInterval(() => {
+    if (pending === 0 || draining) return;
+    draining = (async () => {
+      try {
+        await simulateRedisOp(); // dequeue
+        pending = Math.max(0, pending - 1);
+        metrics.queueDepth.set(pending);
+      } catch {
+        // Redis broken: leave queued notifications pending.
+      }
+    })().finally(() => {
+      draining = null;
+    });
   }, 50);
   worker.unref();
+  app.addHook('onClose', async () => {
+    clearInterval(worker);
+    await draining;
+  });
 
   return svc;
 }

@@ -8,6 +8,7 @@
   },
   "types": "./src/index.ts",
   "dependencies": {
+    "@sentinelops/config": "*",
     "@sentinelops/shared-types": "*"
   }
 }

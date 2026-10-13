@@ -40,6 +40,26 @@ describe('recommendActions', () => {
 });
 
 describe('recovery', () => {
+  it('requires request traffic within both bounds of its healthy baseline', () => {
+    for (const observed of [0, 50, 160]) {
+      expect(
+        evaluateRecovery([{ metric: 'request_rate', observed, baseline: 100 }]).recovered
+      ).toBe(false);
+    }
+    expect(
+      evaluateRecovery([{ metric: 'request_rate', observed: 90, baseline: 100 }]).recovered
+    ).toBe(true);
+  });
+  it('rejects invalid observations and tolerance', () => {
+    for (const observed of [NaN, Infinity, -1]) {
+      const result = evaluateRecovery([{ metric: 'error_rate', observed, baseline: 0 }]);
+      expect(result.checks[0]?.passed).toBe(false);
+      expect(result.recovered).toBe(false);
+    }
+    for (const tolerance of [NaN, Infinity, 0.5]) {
+      expect(() => evaluateRecovery([], { tolerance })).toThrow(RangeError);
+    }
+  });
   it('passes when metrics are within tolerance of baseline', () => {
     const r = evaluateRecovery([
       { metric: 'request_latency_ms', observed: 210, baseline: 180 },

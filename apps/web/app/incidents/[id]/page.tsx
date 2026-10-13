@@ -1,10 +1,12 @@
 'use client';
-import { use, useState } from 'react';
+import { useParams } from 'next/navigation';
+import { useState } from 'react';
+
 import { Shell } from '@/components/Shell';
 import { Card, SeverityBadge, StatusBadge } from '@/components/StatusBadge';
-import { useApi } from '@/lib/useApi';
 import { apiFetch } from '@/lib/api';
 import { useAuth, canApprove } from '@/lib/store';
+import { useApi } from '@/lib/useApi';
 
 interface Investigation {
   summary: string;
@@ -47,9 +49,9 @@ interface IncidentDetail {
   postmortem: { content_md: string } | null;
 }
 
-export default function IncidentDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
-  const { data, reload } = useApi<IncidentDetail>(`/api/incidents/${id}`, 4000);
+export default function IncidentDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const { data, error, stale, reload } = useApi<IncidentDetail>(`/api/incidents/${id}`, 4000);
   const user = useAuth(s => s.user);
   const [busy, setBusy] = useState('');
 
@@ -68,7 +70,7 @@ export default function IncidentDetailPage({ params }: { params: Promise<{ id: s
   if (!data)
     return (
       <Shell>
-        <div className="text-muted">Loading…</div>
+        <div className="text-muted">{error ?? 'Loading…'}</div>
       </Shell>
     );
 
@@ -86,11 +88,16 @@ export default function IncidentDetailPage({ params }: { params: Promise<{ id: s
       <p className="text-muted text-sm mb-4">
         {data.title} · affected: {data.affected_services.join(', ')}
       </p>
+      {stale && (
+        <p role="status" className="text-warning">
+          Live incident updates unavailable; displayed data may be stale.
+        </p>
+      )}
 
       <div className="flex gap-2 mb-6">
         <button
           className="btn btn-primary"
-          disabled={!!busy}
+          disabled={!!busy || !engineer}
           onClick={() =>
             act('investigate', () =>
               apiFetch(`/api/incidents/${id}/investigate`, { method: 'POST', body: '{}' })
@@ -112,7 +119,7 @@ export default function IncidentDetailPage({ params }: { params: Promise<{ id: s
             Propose remediation
           </button>
         )}
-        {data.status === 'RESOLVED' && (
+        {engineer && data.status === 'RESOLVED' && (
           <button
             className="btn"
             disabled={!!busy}

@@ -28,6 +28,10 @@ export class RollingWindow {
     return this.buf.length;
   }
 
+  values(): number[] {
+    return [...this.buf];
+  }
+
   mean(): number {
     return this.buf.length ? this.sum / this.buf.length : 0;
   }

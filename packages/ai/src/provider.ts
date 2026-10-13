@@ -41,6 +41,7 @@ export class AnthropicProvider implements LlmProvider {
       .map(m => m.content)
       .join('\n');
     const res = await fetch('https://api.anthropic.com/v1/messages', {
+      signal: AbortSignal.timeout(15000),
       method: 'POST',
       headers: {
         'content-type': 'application/json',
@@ -70,6 +71,7 @@ export class OpenAiCompatibleProvider implements LlmProvider {
   ) {}
   async complete(messages: LlmMessage[]): Promise<string> {
     const res = await fetch(`${this.baseUrl.replace(/\/$/, '')}/chat/completions`, {
+      signal: AbortSignal.timeout(15000),
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: `Bearer ${this.apiKey}` },
       body: JSON.stringify({ model: this.model, messages }),
@@ -80,13 +82,17 @@ export class OpenAiCompatibleProvider implements LlmProvider {
   }
 }
 
-/** Select a provider from env; always falls back to the mock. */
+/** Explicit remote selection fails fast instead of silently changing providers. */
 export function getLlmProvider(): LlmProvider {
   const env = getEnv();
-  if (env.LLM_PROVIDER === 'anthropic' && env.ANTHROPIC_API_KEY) {
+  if (env.LLM_PROVIDER === 'anthropic') {
+    if (!env.ANTHROPIC_API_KEY || !env.LLM_MODEL)
+      throw new Error('Anthropic provider requires API key and explicit model');
     return new AnthropicProvider(env.ANTHROPIC_API_KEY, env.LLM_MODEL);
   }
-  if (env.LLM_PROVIDER === 'openai-compatible' && env.OPENAI_API_KEY && env.OPENAI_BASE_URL) {
+  if (env.LLM_PROVIDER === 'openai-compatible') {
+    if (!env.OPENAI_API_KEY || !env.OPENAI_BASE_URL || !env.LLM_MODEL)
+      throw new Error('OpenAI-compatible provider requires API key, base URL and explicit model');
     return new OpenAiCompatibleProvider(env.OPENAI_API_KEY, env.OPENAI_BASE_URL, env.LLM_MODEL);
   }
   return new MockProvider();

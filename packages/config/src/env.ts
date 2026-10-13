@@ -11,14 +11,18 @@ const EnvSchema = z.object({
 
   DATABASE_URL: z
     .string()
-    .default('postgresql://sentinel:sentinel_dev_pw@localhost:5432/sentinelops'),
+    .default('postgresql://sentinel:sentinel_dev_pw@127.0.0.1:5432/sentinelops'),
 
-  REDIS_URL: z.string().default('redis://localhost:6379'),
+  REDIS_URL: z.string().default('redis://127.0.0.1:6379'),
 
-  KAFKA_BROKERS: z.string().default('localhost:9092'),
+  KAFKA_BROKERS: z.string().default('127.0.0.1:9092'),
   KAFKA_CLIENT_ID: z.string().default('sentinelops'),
+  KAFKA_SSL: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform(v => v === 'true'),
 
-  OTEL_EXPORTER_OTLP_ENDPOINT: z.string().default('http://localhost:4318'),
+  OTEL_EXPORTER_OTLP_ENDPOINT: z.string().default('http://127.0.0.1:4318'),
   OTEL_SERVICE_NAMESPACE: z.string().default('sentinelops'),
   OTEL_TRACES_SAMPLER_ARG: z.coerce.number().min(0).max(1).default(1),
 
@@ -26,12 +30,18 @@ const EnvSchema = z.object({
 
   JWT_SECRET: z.string().default('change_me_in_production_dev_only_secret'),
   JWT_EXPIRES_IN: z.string().default('1h'),
+  DEMO_MODE: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform(v => v === 'true'),
+  INTERNAL_API_TOKEN: z.string().default(''),
+  CORS_ORIGIN: z.string().default('http://localhost:3000'),
 
   LLM_PROVIDER: z.enum(['mock', 'anthropic', 'openai-compatible']).default('mock'),
   ANTHROPIC_API_KEY: z.string().optional(),
   OPENAI_API_KEY: z.string().optional(),
   OPENAI_BASE_URL: z.string().optional(),
-  LLM_MODEL: z.string().default('claude-sonnet-5'),
+  LLM_MODEL: z.string().default(''),
   EMBEDDINGS_PROVIDER: z.enum(['mock', 'openai-compatible']).default('mock'),
   EMBEDDINGS_DIM: z.coerce.number().int().positive().default(384),
 });

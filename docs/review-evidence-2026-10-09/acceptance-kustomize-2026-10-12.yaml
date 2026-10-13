@@ -1,0 +1,2189 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    app.kubernetes.io/part-of: sentinelops
+  name: sentinelops
+---
+apiVersion: v1
+data:
+  alertmanager.yml: |
+    global:
+      resolve_timeout: 5m
+
+    route:
+      group_by: ['alertname', 'service']
+      group_wait: 10s
+      group_interval: 10s
+      repeat_interval: 12h
+      receiver: 'default'
+      routes:
+        - match:
+            severity: critical
+          receiver: 'critical'
+          continue: true
+
+    receivers:
+      - name: 'default'
+        # Demo receiver intentionally has no external delivery. Configure a real
+        # receiver before enabling external notifications.
+
+      - name: 'critical'
+
+    inhibit_rules:
+      - source_match:
+          severity: 'critical'
+        target_match:
+          severity: 'warning'
+        equal: ['alertname', 'service']
+kind: ConfigMap
+metadata:
+  name: alertmanager-config
+  namespace: sentinelops
+---
+apiVersion: v1
+data:
+  sentinelops-overview.json: |
+    {
+      "annotations": {
+        "list": [
+          {
+            "builtIn": 1,
+            "datasource": "-- Grafana --",
+            "enable": true,
+            "hide": true,
+            "iconColor": "rgba(0, 211, 255, 1)",
+            "name": "Annotations & Alerts",
+            "type": "dashboard"
+          }
+        ]
+      },
+      "editable": true,
+      "gnetId": null,
+      "graphTooltip": 0,
+      "id": null,
+      "links": [],
+      "panels": [
+        {
+          "datasource": "Prometheus",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "yellow", "value": 0.5 },
+                  { "color": "red", "value": 0.85 }
+                ]
+              },
+              "unit": "percentunit"
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+          "id": 1,
+          "options": {
+            "orientation": "auto",
+            "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
+            "showThresholdLabels": false,
+            "showThresholdMarkers": true
+          },
+          "targets": [
+            {
+              "expr": "db_pool_utilization{job=\"sentinelops-services\"}",
+              "legendFormat": "{{service}}",
+              "refId": "A"
+            }
+          ],
+          "title": "DB Pool Utilization",
+          "type": "gauge"
+        },
+        {
+          "datasource": "Prometheus",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "hideFrom": { "tooltip": false, "viz": false, "legend": false },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": { "type": "linear" },
+                "showPoints": "never",
+                "spanNulls": true
+              },
+              "mappings": [],
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+              "unit": "ms"
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+          "id": 2,
+          "options": {
+            "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
+            "tooltip": { "mode": "single" }
+          },
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_ms_bucket{job=\"sentinelops-services\"}[5m])) by (le, service))",
+              "legendFormat": "{{service}} p95",
+              "refId": "A"
+            }
+          ],
+          "title": "HTTP Request Latency (p95)",
+          "type": "timeseries"
+        },
+        {
+          "datasource": "Prometheus",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "yellow", "value": 0.01 },
+                  { "color": "red", "value": 0.05 }
+                ]
+              },
+              "unit": "percentunit"
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+          "id": 3,
+          "options": {
+            "orientation": "auto",
+            "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
+            "showThresholdLabels": false,
+            "showThresholdMarkers": true
+          },
+          "targets": [
+            {
+              "expr": "sum(rate(http_requests_total{job=\"sentinelops-services\",status=~\"5..\"}[5m])) by (service) / sum(rate(http_requests_total{job=\"sentinelops-services\"}[5m])) by (service)",
+              "legendFormat": "{{service}} error rate",
+              "refId": "A"
+            }
+          ],
+          "title": "HTTP Error Rate (5xx)",
+          "type": "gauge"
+        },
+        {
+          "datasource": "Prometheus",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "hideFrom": { "tooltip": false, "viz": false, "legend": false },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": { "type": "linear" },
+                "showPoints": "never",
+                "spanNulls": true
+              },
+              "mappings": [],
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+              "unit": "ops"
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+          "id": 4,
+          "options": {
+            "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
+            "tooltip": { "mode": "single" }
+          },
+          "targets": [
+            {
+              "expr": "sum(rate(http_requests_total{job=\"sentinelops-services\"}[5m])) by (service)",
+              "legendFormat": "{{service}} req/s",
+              "refId": "A"
+            }
+          ],
+          "title": "Request Rate",
+          "type": "timeseries"
+        },
+        {
+          "datasource": "Prometheus",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "mappings": [
+                {
+                  "options": {
+                    "0": { "color": "green", "index": 0, "text": "HEALTHY" },
+                    "1": { "color": "yellow", "index": 1, "text": "DEGRADED" },
+                    "2": { "color": "red", "index": 2, "text": "UNHEALTHY" },
+                    "3": { "color": "gray", "index": 3, "text": "UNKNOWN" }
+                  },
+                  "type": "value"
+                }
+              ],
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 16 },
+          "id": 5,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
+            "text": {},
+            "textMode": "auto"
+          },
+          "targets": [
+            {
+              "expr": "up{job=~\"sentinelops.*\"}",
+              "legendFormat": "{{job}} - {{instance}}",
+              "refId": "A"
+            }
+          ],
+          "title": "Service Health Status",
+          "type": "stat"
+        },
+        {
+          "datasource": "Prometheus",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "hideFrom": { "tooltip": false, "viz": false, "legend": false },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": { "type": "linear" },
+                "showPoints": "never",
+                "spanNulls": true
+              },
+              "mappings": [],
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+              "unit": "reqps"
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+          "id": 6,
+          "options": {
+            "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
+            "tooltip": { "mode": "single" }
+          },
+          "targets": [
+            {
+              "expr": "sum(rate(anomalies_emitted_total[5m])) by (service, severity)",
+              "legendFormat": "{{service}} - {{severity}}",
+              "refId": "A"
+            }
+          ],
+          "title": "Anomalies Detected Rate",
+          "type": "timeseries"
+        },
+        {
+          "datasource": "Prometheus",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "hideFrom": { "tooltip": false, "viz": false, "legend": false },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": { "type": "linear" },
+                "showPoints": "never",
+                "spanNulls": true
+              },
+              "mappings": [],
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+          "id": 7,
+          "options": {
+            "legend": { "calcs": ["lastNotNull"], "displayMode": "table", "placement": "bottom" },
+            "tooltip": { "mode": "single" }
+          },
+          "targets": [
+            {
+              "expr": "open_correlation_groups",
+              "legendFormat": "open groups",
+              "refId": "A"
+            },
+            {
+              "expr": "incidents_created_total",
+              "legendFormat": "incidents created",
+              "refId": "B"
+            }
+          ],
+          "title": "Incident Engine Metrics",
+          "type": "timeseries"
+        }
+      ],
+      "schemaVersion": 38,
+      "style": "dark",
+      "tags": ["sentinelops", "overview"],
+      "templating": { "list": [] },
+      "time": { "from": "now-1h", "to": "now" },
+      "timepicker": {},
+      "timezone": "",
+      "title": "SentinelOps - Platform Overview",
+      "uid": "sentinelops-overview",
+      "version": 1,
+      "weekStart": ""
+    }
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards
+  namespace: sentinelops
+---
+apiVersion: v1
+data:
+  sentinelops.yml: |
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        uid: prometheus
+        type: prometheus
+        access: proxy
+        url: http://prometheus:9090
+        isDefault: true
+      - name: Loki
+        uid: loki
+        type: loki
+        access: proxy
+        url: http://loki:3100
+      - name: Jaeger
+        uid: jaeger
+        type: jaeger
+        access: proxy
+        url: http://jaeger:16686
+kind: ConfigMap
+metadata:
+  name: grafana-datasources
+  namespace: sentinelops
+---
+apiVersion: v1
+data:
+  sentinelops.yml: |
+    apiVersion: 1
+    providers:
+      - name: SentinelOps
+        folder: SentinelOps
+        type: file
+        options:
+          path: /var/lib/grafana/dashboards
+kind: ConfigMap
+metadata:
+  name: grafana-providers
+  namespace: sentinelops
+---
+apiVersion: v1
+data:
+  config.yaml: |
+    auth_enabled: false
+
+    server:
+      http_listen_port: 3100
+      grpc_listen_port: 9096
+
+    common:
+      path_prefix: /loki
+      storage:
+        filesystem:
+          chunks_directory: /loki/chunks
+          rules_directory: /loki/rules
+      replication_factor: 1
+      ring:
+        instance_addr: 127.0.0.1
+        kvstore:
+          store: inmemory
+
+    query_range:
+      results_cache:
+        cache:
+          embedded_cache:
+            enabled: true
+            max_size_mb: 100
+
+    limits_config:
+      # Legacy boltdb history remains readable; native OTLP metadata needs TSDB.
+      allow_structured_metadata: false
+      reject_old_samples: true
+      reject_old_samples_max_age: 168h
+      ingestion_rate_mb: 10
+      ingestion_burst_size_mb: 20
+      per_stream_rate_limit: 3MB
+      per_stream_rate_limit_burst: 10MB
+
+    schema_config:
+      configs:
+        - from: 2024-01-01
+          store: boltdb-shipper
+          object_store: filesystem
+          schema: v13
+          index:
+            prefix: index_
+            period: 24h
+
+    ruler:
+      alertmanager_url: http://alertmanager:9093
+kind: ConfigMap
+metadata:
+  name: loki-config
+  namespace: sentinelops
+---
+apiVersion: v1
+data:
+  config.yaml: |
+    # OpenTelemetry Collector — receives OTLP from all services, exports traces to
+    # Jaeger and metrics to a Prometheus-scrapeable endpoint with exemplars.
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+
+    processors:
+      batch:
+        timeout: 2s
+      memory_limiter:
+        check_interval: 2s
+        limit_percentage: 80
+        spike_limit_percentage: 20
+      # Add resource attributes for better correlation
+      resource:
+        attributes:
+          - key: service.namespace
+            value: 'sentinelops'
+            action: insert
+
+    exporters:
+      # Traces → Jaeger (OTLP gRPC on the jaeger container).
+      otlp/jaeger:
+        endpoint: jaeger:4317
+        tls:
+          insecure: true
+      # Metrics → Prometheus exposition on :8889 WITH EXEMPLARS.
+      prometheus:
+        endpoint: 0.0.0.0:8889
+        resource_to_telemetry_conversion:
+          enabled: true
+        # Enable exemplars for metric-to-trace correlation
+        enable_open_metrics: true
+      # Logs → Loki for log aggregation
+      loki:
+        endpoint: http://loki:3100/loki/api/v1/push
+        default_labels_enabled:
+          exporter: true
+          job: true
+          instance: true
+          level: true
+      # Logs → collector stdout (viewable via docker logs) for the demo.
+      debug:
+        verbosity: normal
+
+    service:
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [memory_limiter, batch, resource]
+          exporters: [otlp/jaeger]
+        metrics:
+          receivers: [otlp]
+          processors: [memory_limiter, batch, resource]
+          exporters: [prometheus]
+        logs:
+          receivers: [otlp]
+          processors: [memory_limiter, batch, resource]
+          exporters: [loki, debug]
+kind: ConfigMap
+metadata:
+  name: otel-config
+  namespace: sentinelops
+---
+apiVersion: v1
+data:
+  sentinelops.yml: |
+    # SentinelOps Prometheus Alerting Rules
+    # These define SLI-based alerts for the platform
+
+    groups:
+      - name: sentinelops.services
+        interval: 30s
+        rules:
+          # Data-plane services
+          - alert: ServiceDown
+            expr: up{job="sentinelops-services"} == 0
+            for: 2m
+            labels:
+              severity: critical
+            annotations:
+              summary: 'Service {{ $labels.instance }} is down'
+              description: '{{ $labels.job }} service {{ $labels.instance }} has been down for 2 minutes'
+
+          - alert: ServiceHighErrorRate
+            expr: |
+              sum(rate(http_requests_total{job="sentinelops-services",status=~"5.."}[5m])) by (service, instance)
+              /
+              sum(rate(http_requests_total{job="sentinelops-services"}[5m])) by (service, instance)
+              > 0.05
+            for: 5m
+            labels:
+              severity: critical
+            annotations:
+              summary: 'High error rate on {{ $labels.service }} ({{ $labels.instance }})'
+              description: 'Error rate exceeds 5% for 5 minutes'
+
+          - alert: ServiceHighLatency
+            expr: |
+              histogram_quantile(0.95, sum(rate(http_request_duration_ms_bucket{job="sentinelops-services"}[5m])) by (le, service, instance)) > 2000
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: 'High p95 latency on {{ $labels.service }} ({{ $labels.instance }})'
+              description: 'p95 latency exceeds 2 seconds for 5 minutes'
+
+          - alert: ServiceHighDbPoolUtilization
+            expr: db_pool_utilization{job="sentinelops-services"} > 0.85
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: 'DB pool utilization high on {{ $labels.service }}'
+              description: 'Database connection pool utilization exceeds 85%'
+
+          - alert: ServiceHighMemoryUsage
+            expr: memory_usage{job="sentinelops-services"} > 500000000
+            for: 10m
+            labels:
+              severity: warning
+            annotations:
+              summary: 'High memory usage on {{ $labels.service }}'
+              description: 'Memory usage exceeds 500MB for 10 minutes'
+
+          # Control plane
+          - alert: ControlPlaneServiceDown
+            expr: up{job="sentinelops-control-plane"} == 0
+            for: 2m
+            labels:
+              severity: critical
+            annotations:
+              summary: 'Control plane service {{ $labels.instance }} is down'
+              description: 'Control plane service {{ $labels.instance }} has been down for 2 minutes'
+
+          - alert: IncidentEngineHighOpenGroups
+            expr: open_correlation_groups{job="sentinelops-control-plane"} > 50
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: 'High number of open correlation groups'
+              description: 'Incident engine has more than 50 open correlation groups'
+
+          - alert: AnomalyEngineNoAnomalies
+            expr: rate(anomalies_emitted_total{job="sentinelops-control-plane"}[10m]) == 0
+            for: 10m
+            labels:
+              severity: info
+            annotations:
+              summary: 'No anomalies detected recently'
+              description: "Anomaly engine hasn't emitted any anomalies in 10 minutes"
+
+      - name: sentinelops.platform
+        interval: 30s
+        rules:
+          - alert: APIDown
+            expr: up{job="sentinelops-api"} == 0
+            for: 1m
+            labels:
+              severity: critical
+            annotations:
+              summary: 'Platform API is down'
+              description: 'The platform API has been down for more than 1 minute'
+
+          - alert: APIHighErrorRate
+            expr: |
+              sum(rate(api_requests_total{job="sentinelops-api",status=~"5.."}[5m]))
+              /
+              sum(rate(api_requests_total{job="sentinelops-api"}[5m]))
+              > 0.05
+            for: 5m
+            labels:
+              severity: critical
+            annotations:
+              summary: 'Platform API high error rate'
+              description: 'Platform API error rate exceeds 5%'
+
+      - name: sentinelops.observability
+        interval: 30s
+        rules:
+          - alert: PrometheusDown
+            expr: up{job="prometheus"} == 0
+            for: 1m
+            labels:
+              severity: critical
+            annotations:
+              summary: 'Prometheus is down'
+              description: 'Prometheus has been down for more than 1 minute'
+
+          - alert: PrometheusHighScrapeFailures
+            expr: |
+              sum(rate(prometheus_target_scrapes_sample_limit_exceeded_total[5m])) by (job)
+              > 0
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: 'Prometheus scrape sample limit exceeded'
+              description: 'Prometheus scrape for {{ $labels.job }} is hitting sample limits'
+
+          - alert: OTelCollectorDown
+            expr: up{job="otel-collector"} == 0
+            for: 1m
+            labels:
+              severity: critical
+            annotations:
+              summary: 'OTel Collector is down'
+              description: 'OpenTelemetry Collector has been down for more than 1 minute'
+
+          - alert: LokiDown
+            expr: up{job="loki"} == 0
+            for: 1m
+            labels:
+              severity: critical
+            annotations:
+              summary: 'Loki is down'
+              description: 'Loki log aggregation has been down for more than 1 minute'
+kind: ConfigMap
+metadata:
+  name: prometheus-alerts
+  namespace: sentinelops
+---
+apiVersion: v1
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 5s
+      evaluation_interval: 5s
+      external_labels:
+        monitor: sentinelops
+
+    # Alerting configuration
+    alerting:
+      alertmanagers:
+        - static_configs:
+            - targets: ['alertmanager:9093']
+
+    # Rule files
+    rule_files:
+      - '/etc/prometheus/alerts/*.yml'
+
+    scrape_configs:
+      # The OTel Collector re-exports app metrics on :8889.
+      - job_name: otel-collector
+        static_configs:
+          - targets: ['otel-collector:8889']
+
+      # Prometheus scrapes itself.
+      - job_name: prometheus
+        static_configs:
+          - targets: ['localhost:9090']
+
+      # Direct /metrics endpoints exposed by each data-plane service.
+      # (Reachable by container name when services run in the app compose network.)
+      - job_name: sentinelops-services
+        metrics_path: /metrics
+        static_configs:
+          - targets:
+              - 'api-gateway:8080'
+              - 'user-service:8081'
+              - 'order-service:8082'
+              - 'payment-service:8083'
+              - 'notification-service:8084'
+        # Don't fail the whole scrape pool while services are still coming up.
+        honor_labels: true
+
+      # Control plane — SentinelOps observing itself.
+      - job_name: sentinelops-control-plane
+        metrics_path: /metrics
+        static_configs:
+          - targets:
+              - 'incident-engine:8090'
+              - 'anomaly-engine:8091'
+              - 'ingestor:8095'
+        honor_labels: true
+
+      # Platform API
+      - job_name: sentinelops-api
+        metrics_path: /metrics
+        static_configs:
+          - targets: ['api:4000']
+        honor_labels: true
+
+      # Loki
+      - job_name: loki
+        static_configs:
+          - targets: ['loki:3100']
+
+      # Alertmanager
+      - job_name: alertmanager
+        static_configs:
+          - targets: ['alertmanager:9093']
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: sentinelops
+---
+apiVersion: v1
+data:
+  CORS_ORIGIN: http://sentinelops.local
+  DEMO_MODE: "true"
+  EMBEDDINGS_PROVIDER: mock
+  KAFKA_BROKERS: kafka:9092
+  KAFKA_TELEMETRY: "on"
+  LLM_PROVIDER: mock
+  LOG_LEVEL: info
+  NODE_ENV: production
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+  OTEL_SERVICE_NAMESPACE: sentinelops
+  OTEL_TRACES_SAMPLER: parentbased_traceidratio
+  OTEL_TRACES_SAMPLER_ARG: "0.1"
+  PROMETHEUS_URL: http://prometheus:9090
+kind: ConfigMap
+metadata:
+  name: sentinelops-config
+  namespace: sentinelops
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sentinelops-secrets
+  namespace: sentinelops
+stringData:
+  ANTHROPIC_API_KEY: ""
+  DATABASE_URL: postgresql://sentinel:CHANGE_ME@postgres:5432/sentinelops
+  INTERNAL_API_TOKEN: sentinelops-isolated-local-demo-token-2026
+  JWT_SECRET: CHANGE_ME_IN_PRODUCTION_USE_EXTERNAL_SECRETS
+  OPENAI_API_KEY: ""
+  OPENAI_BASE_URL: ""
+  POSTGRES_DB: sentinelops
+  POSTGRES_PASSWORD: CHANGE_ME
+  POSTGRES_USER: sentinel
+  REDIS_URL: redis://redis:6379
+type: Opaque
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alertmanager
+  namespace: sentinelops
+spec:
+  ports:
+  - name: port-9093
+    port: 9093
+    targetPort: 9093
+  selector:
+    app: alertmanager
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: anomaly-engine
+  namespace: sentinelops
+spec:
+  ports:
+  - port: 8091
+    targetPort: 8091
+  selector:
+    app: anomaly-engine
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+  namespace: sentinelops
+spec:
+  ports:
+  - port: 4000
+    targetPort: 4000
+  selector:
+    app: api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-gateway
+  namespace: sentinelops
+spec:
+  ports:
+  - port: 8080
+    targetPort: 8080
+  selector:
+    app: api-gateway
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: sentinelops
+spec:
+  ports:
+  - name: port-3000
+    port: 3000
+    targetPort: 3000
+  selector:
+    app: grafana
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: incident-engine
+  namespace: sentinelops
+spec:
+  ports:
+  - port: 8090
+    targetPort: 8090
+  selector:
+    app: incident-engine
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ingestor
+  namespace: sentinelops
+spec:
+  ports:
+  - port: 8095
+    targetPort: 8095
+  selector:
+    app: ingestor
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jaeger
+  namespace: sentinelops
+spec:
+  ports:
+  - name: port-16686
+    port: 16686
+    targetPort: 16686
+  - name: port-4317
+    port: 4317
+    targetPort: 4317
+  - name: port-4318
+    port: 4318
+    targetPort: 4318
+  selector:
+    app: jaeger
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka
+  namespace: sentinelops
+spec:
+  ports:
+  - port: 9092
+    targetPort: 9092
+  selector:
+    app: kafka
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: loki
+  namespace: sentinelops
+spec:
+  ports:
+  - name: port-3100
+    port: 3100
+    targetPort: 3100
+  selector:
+    app: loki
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-service
+  namespace: sentinelops
+spec:
+  ports:
+  - port: 8084
+    targetPort: 8084
+  selector:
+    app: notification-service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-service
+  namespace: sentinelops
+spec:
+  ports:
+  - port: 8082
+    targetPort: 8082
+  selector:
+    app: order-service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-collector
+  namespace: sentinelops
+spec:
+  ports:
+  - name: port-4317
+    port: 4317
+    targetPort: 4317
+  - name: port-4318
+    port: 4318
+    targetPort: 4318
+  - name: port-8889
+    port: 8889
+    targetPort: 8889
+  selector:
+    app: otel-collector
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-service
+  namespace: sentinelops
+spec:
+  ports:
+  - port: 8083
+    targetPort: 8083
+  selector:
+    app: payment-service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: sentinelops
+spec:
+  ports:
+  - port: 5432
+    targetPort: 5432
+  selector:
+    app: postgres
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+  namespace: sentinelops
+spec:
+  ports:
+  - name: port-9090
+    port: 9090
+    targetPort: 9090
+  selector:
+    app: prometheus
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: sentinelops
+spec:
+  ports:
+  - port: 6379
+    targetPort: 6379
+  selector:
+    app: redis
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-service
+  namespace: sentinelops
+spec:
+  ports:
+  - port: 8081
+    targetPort: 8081
+  selector:
+    app: user-service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web
+  namespace: sentinelops
+spec:
+  ports:
+  - port: 3000
+    targetPort: 3000
+  selector:
+    app: web
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: alertmanager-data
+  namespace: sentinelops
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: grafana-data
+  namespace: sentinelops
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: kafka-data
+  namespace: sentinelops
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: loki-data
+  namespace: sentinelops
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-data
+  namespace: sentinelops
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: prometheus-data
+  namespace: sentinelops
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-data
+  namespace: sentinelops
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alertmanager
+  namespace: sentinelops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: alertmanager
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: alertmanager
+    spec:
+      containers:
+      - args:
+        - --config.file=/etc/alertmanager/alertmanager.yml
+        - --storage.path=/alertmanager
+        image: prom/alertmanager:v0.27.0
+        name: alertmanager
+        ports:
+        - containerPort: 9093
+        readinessProbe:
+          httpGet:
+            path: /-/ready
+            port: 9093
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: "1"
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+        volumeMounts:
+        - mountPath: /alertmanager
+          name: data
+        - mountPath: /etc/alertmanager
+          name: alertmanager-config
+          readOnly: true
+      securityContext:
+        fsGroup: 10001
+      volumes:
+      - configMap:
+          name: alertmanager-config
+        name: alertmanager-config
+      - name: data
+        persistentVolumeClaim:
+          claimName: alertmanager-data
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: anomaly-engine
+  namespace: sentinelops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: anomaly-engine
+  template:
+    metadata:
+      labels:
+        app: anomaly-engine
+    spec:
+      containers:
+      - command:
+        - npm
+        - run
+        - start
+        - -w
+        - '@sentinelops/anomaly-engine'
+        env:
+        - name: ANOMALY_ENGINE_PORT
+          value: "8091"
+        envFrom:
+        - configMapRef:
+            name: sentinelops-config
+        - secretRef:
+            name: sentinelops-secrets
+        image: sentinelops/app:local
+        imagePullPolicy: IfNotPresent
+        name: anomaly-engine
+        ports:
+        - containerPort: 8091
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: 8091
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 250m
+            memory: 256Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: sentinelops
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      containers:
+      - command:
+        - npm
+        - run
+        - start
+        - -w
+        - '@sentinelops/api'
+        env:
+        - name: API_PORT
+          value: "4000"
+        envFrom:
+        - configMapRef:
+            name: sentinelops-config
+        - secretRef:
+            name: sentinelops-secrets
+        image: sentinelops/app:local
+        imagePullPolicy: IfNotPresent
+        name: api
+        ports:
+        - containerPort: 4000
+        readinessProbe:
+          httpGet:
+            path: /api/ready
+            port: 4000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 250m
+            memory: 256Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+  namespace: sentinelops
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: api-gateway
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+    spec:
+      containers:
+      - command:
+        - npm
+        - run
+        - start
+        - -w
+        - '@sentinelops/api-gateway'
+        env:
+        - name: API_GATEWAY_PORT
+          value: "8080"
+        - name: USER_SERVICE_URL
+          value: http://user-service:8081
+        - name: ORDER_SERVICE_URL
+          value: http://order-service:8082
+        envFrom:
+        - configMapRef:
+            name: sentinelops-config
+        - secretRef:
+            name: sentinelops-secrets
+        image: sentinelops/app:local
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 15
+        name: api-gateway
+        ports:
+        - containerPort: 8080
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: 8080
+          initialDelaySeconds: 8
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: 300m
+            memory: 256Mi
+          requests:
+            cpu: 150m
+            memory: 128Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: sentinelops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      containers:
+      - env:
+        - name: GF_AUTH_ANONYMOUS_ENABLED
+          value: "false"
+        image: grafana/grafana:11.3.0
+        name: grafana
+        ports:
+        - containerPort: 3000
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: "1"
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+        volumeMounts:
+        - mountPath: /var/lib/grafana
+          name: data
+        - mountPath: /etc/grafana/provisioning/datasources
+          name: grafana-datasources
+          readOnly: true
+        - mountPath: /etc/grafana/provisioning/dashboards
+          name: grafana-providers
+          readOnly: true
+        - mountPath: /var/lib/grafana/dashboards
+          name: grafana-dashboards
+          readOnly: true
+      securityContext:
+        fsGroup: 472
+      volumes:
+      - configMap:
+          name: grafana-datasources
+        name: grafana-datasources
+      - configMap:
+          name: grafana-providers
+        name: grafana-providers
+      - configMap:
+          name: grafana-dashboards
+        name: grafana-dashboards
+      - name: data
+        persistentVolumeClaim:
+          claimName: grafana-data
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: incident-engine
+  namespace: sentinelops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: incident-engine
+  template:
+    metadata:
+      labels:
+        app: incident-engine
+    spec:
+      containers:
+      - command:
+        - npm
+        - run
+        - start
+        - -w
+        - '@sentinelops/incident-engine'
+        env:
+        - name: INCIDENT_ENGINE_PORT
+          value: "8090"
+        envFrom:
+        - configMapRef:
+            name: sentinelops-config
+        - secretRef:
+            name: sentinelops-secrets
+        image: sentinelops/app:local
+        imagePullPolicy: IfNotPresent
+        name: incident-engine
+        ports:
+        - containerPort: 8090
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: 8090
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 250m
+            memory: 256Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ingestor
+  namespace: sentinelops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ingestor
+  template:
+    metadata:
+      labels:
+        app: ingestor
+    spec:
+      containers:
+      - command:
+        - npm
+        - run
+        - start
+        - -w
+        - '@sentinelops/ingestor'
+        env:
+        - name: INGESTOR_PORT
+          value: "8095"
+        envFrom:
+        - configMapRef:
+            name: sentinelops-config
+        - secretRef:
+            name: sentinelops-secrets
+        image: sentinelops/app:local
+        imagePullPolicy: IfNotPresent
+        name: ingestor
+        ports:
+        - containerPort: 8095
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: 8095
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 250m
+            memory: 256Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jaeger
+  namespace: sentinelops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jaeger
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: jaeger
+    spec:
+      containers:
+      - env:
+        - name: COLLECTOR_OTLP_ENABLED
+          value: "true"
+        image: jaegertracing/all-in-one:1.62.0
+        name: jaeger
+        ports:
+        - containerPort: 16686
+        - containerPort: 4317
+        - containerPort: 4318
+        readinessProbe:
+          initialDelaySeconds: 10
+          tcpSocket:
+            port: 16686
+        resources:
+          limits:
+            cpu: "1"
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+        volumeMounts: []
+      volumes: []
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka
+  namespace: sentinelops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: kafka
+    spec:
+      containers:
+      - env:
+        - name: KAFKA_NODE_ID
+          value: "1"
+        - name: KAFKA_PROCESS_ROLES
+          value: broker,controller
+        - name: KAFKA_LISTENERS
+          value: PLAINTEXT://:9092,CONTROLLER://:9093
+        - name: KAFKA_ADVERTISED_LISTENERS
+          value: PLAINTEXT://kafka:9092
+        - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
+          value: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+        - name: KAFKA_CONTROLLER_LISTENER_NAMES
+          value: CONTROLLER
+        - name: KAFKA_CONTROLLER_QUORUM_VOTERS
+          value: 1@localhost:9093
+        - name: KAFKA_INTER_BROKER_LISTENER_NAME
+          value: PLAINTEXT
+        - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
+          value: "1"
+        - name: KAFKA_AUTO_CREATE_TOPICS_ENABLE
+          value: "true"
+        - name: KAFKA_NUM_PARTITIONS
+          value: "3"
+        - name: KAFKA_LOG_DIRS
+          value: /var/lib/kafka/data
+        - name: CLUSTER_ID
+          value: MkU3OEVBNTcwNTJENDM2Qk
+        image: apache/kafka:3.8.0
+        name: kafka
+        ports:
+        - containerPort: 9092
+        readinessProbe:
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          tcpSocket:
+            port: 9092
+        volumeMounts:
+        - mountPath: /var/lib/kafka/data
+          name: kafkadata
+      securityContext:
+        fsGroup: 1000
+      volumes:
+      - name: kafkadata
+        persistentVolumeClaim:
+          claimName: kafka-data
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loki
+  namespace: sentinelops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: loki
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: loki
+    spec:
+      containers:
+      - args:
+        - -config.file=/etc/loki/config.yaml
+        image: grafana/loki:3.1.0
+        name: loki
+        ports:
+        - containerPort: 3100
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 3100
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: "1"
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+        volumeMounts:
+        - mountPath: /loki
+          name: data
+        - mountPath: /etc/loki
+          name: loki-config
+          readOnly: true
+      securityContext:
+        fsGroup: 10001
+      volumes:
+      - configMap:
+          name: loki-config
+        name: loki-config
+      - name: data
+        persistentVolumeClaim:
+          claimName: loki-data
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-service
+  namespace: sentinelops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notification-service
+  template:
+    metadata:
+      labels:
+        app: notification-service
+    spec:
+      containers:
+      - command:
+        - npm
+        - run
+        - start
+        - -w
+        - '@sentinelops/notification-service'
+        env:
+        - name: NOTIFICATION_SERVICE_PORT
+          value: "8084"
+        envFrom:
+        - configMapRef:
+            name: sentinelops-config
+        - secretRef:
+            name: sentinelops-secrets
+        image: sentinelops/app:local
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: 8084
+          initialDelaySeconds: 15
+          periodSeconds: 15
+        name: notification-service
+        ports:
+        - containerPort: 8084
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: 8084
+          initialDelaySeconds: 8
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: 300m
+            memory: 256Mi
+          requests:
+            cpu: 150m
+            memory: 128Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service
+  namespace: sentinelops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: order-service
+  template:
+    metadata:
+      labels:
+        app: order-service
+    spec:
+      containers:
+      - command:
+        - npm
+        - run
+        - start
+        - -w
+        - '@sentinelops/order-service'
+        env:
+        - name: ORDER_SERVICE_PORT
+          value: "8082"
+        - name: PAYMENT_SERVICE_URL
+          value: http://payment-service:8083
+        - name: NOTIFICATION_SERVICE_URL
+          value: http://notification-service:8084
+        envFrom:
+        - configMapRef:
+            name: sentinelops-config
+        - secretRef:
+            name: sentinelops-secrets
+        image: sentinelops/app:local
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: 8082
+          initialDelaySeconds: 15
+          periodSeconds: 15
+        name: order-service
+        ports:
+        - containerPort: 8082
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: 8082
+          initialDelaySeconds: 8
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: 300m
+            memory: 256Mi
+          requests:
+            cpu: 150m
+            memory: 128Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-collector
+  namespace: sentinelops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: otel-collector
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: otel-collector
+    spec:
+      containers:
+      - args:
+        - --config=/etc/otel/config.yaml
+        image: otel/opentelemetry-collector-contrib:0.111.0
+        name: otel-collector
+        ports:
+        - containerPort: 4317
+        - containerPort: 4318
+        - containerPort: 8889
+        readinessProbe:
+          initialDelaySeconds: 10
+          tcpSocket:
+            port: 4318
+        resources:
+          limits:
+            cpu: "1"
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+        volumeMounts:
+        - mountPath: /etc/otel
+          name: otel-config
+          readOnly: true
+      volumes:
+      - configMap:
+          name: otel-config
+        name: otel-config
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-service
+  namespace: sentinelops
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: payment-service
+  template:
+    metadata:
+      labels:
+        app: payment-service
+    spec:
+      containers:
+      - command:
+        - npm
+        - run
+        - start
+        - -w
+        - '@sentinelops/payment-service'
+        env:
+        - name: PAYMENT_SERVICE_PORT
+          value: "8083"
+        envFrom:
+        - configMapRef:
+            name: sentinelops-config
+        - secretRef:
+            name: sentinelops-secrets
+        image: sentinelops/app:local
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: 8083
+          initialDelaySeconds: 15
+          periodSeconds: 15
+        name: payment-service
+        ports:
+        - containerPort: 8083
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: 8083
+          initialDelaySeconds: 8
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 250m
+            memory: 256Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: sentinelops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+      - env:
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        envFrom:
+        - secretRef:
+            name: sentinelops-secrets
+        image: pgvector/pgvector:pg16
+        name: postgres
+        ports:
+        - containerPort: 5432
+        readinessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - sentinel
+            - -d
+            - sentinelops
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        volumeMounts:
+        - mountPath: /var/lib/postgresql/data
+          name: pgdata
+      volumes:
+      - name: pgdata
+        persistentVolumeClaim:
+          claimName: postgres-data
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  namespace: sentinelops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: prometheus
+    spec:
+      containers:
+      - args:
+        - --config.file=/etc/prometheus/prometheus.yml
+        - --storage.tsdb.path=/prometheus
+        - --storage.tsdb.retention.time=6h
+        image: prom/prometheus:v2.55.0
+        name: prometheus
+        ports:
+        - containerPort: 9090
+        readinessProbe:
+          httpGet:
+            path: /-/ready
+            port: 9090
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: "1"
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+        volumeMounts:
+        - mountPath: /prometheus
+          name: data
+        - mountPath: /etc/prometheus
+          name: prometheus-config
+          readOnly: true
+        - mountPath: /etc/prometheus/alerts
+          name: prometheus-alerts
+          readOnly: true
+      securityContext:
+        fsGroup: 10001
+      volumes:
+      - configMap:
+          name: prometheus-config
+        name: prometheus-config
+      - configMap:
+          name: prometheus-alerts
+        name: prometheus-alerts
+      - name: data
+        persistentVolumeClaim:
+          claimName: prometheus-data
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: sentinelops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+      - args:
+        - redis-server
+        - --appendonly
+        - "yes"
+        image: redis:7-alpine
+        name: redis
+        ports:
+        - containerPort: 6379
+        readinessProbe:
+          exec:
+            command:
+            - redis-cli
+            - ping
+          initialDelaySeconds: 3
+          periodSeconds: 5
+        volumeMounts:
+        - mountPath: /data
+          name: redisdata
+      volumes:
+      - name: redisdata
+        persistentVolumeClaim:
+          claimName: redis-data
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-service
+  namespace: sentinelops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user-service
+  template:
+    metadata:
+      labels:
+        app: user-service
+    spec:
+      containers:
+      - command:
+        - npm
+        - run
+        - start
+        - -w
+        - '@sentinelops/user-service'
+        env:
+        - name: USER_SERVICE_PORT
+          value: "8081"
+        envFrom:
+        - configMapRef:
+            name: sentinelops-config
+        - secretRef:
+            name: sentinelops-secrets
+        image: sentinelops/app:local
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 15
+        name: user-service
+        ports:
+        - containerPort: 8081
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: 8081
+          initialDelaySeconds: 8
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: 300m
+            memory: 256Mi
+          requests:
+            cpu: 150m
+            memory: 128Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: sentinelops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+      - command:
+        - npm
+        - run
+        - start
+        - -w
+        - '@sentinelops/web'
+        env:
+        - name: NODE_ENV
+          value: production
+        - name: NEXT_PUBLIC_API_URL
+          value: http://sentinelops.local
+        - name: NEXT_PUBLIC_WS_URL
+          value: ws://sentinelops.local/ws
+        image: sentinelops/app:local
+        imagePullPolicy: IfNotPresent
+        name: web
+        ports:
+        - containerPort: 3000
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: migrate
+  namespace: sentinelops
+spec:
+  backoffLimit: 5
+  template:
+    spec:
+      containers:
+      - command:
+        - npm
+        - run
+        - db:migrate
+        envFrom:
+        - configMapRef:
+            name: sentinelops-config
+        - secretRef:
+            name: sentinelops-secrets
+        image: sentinelops/app:local
+        imagePullPolicy: IfNotPresent
+        name: migrate
+        resources:
+          limits:
+            cpu: 200m
+            memory: 256Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+      restartPolicy: OnFailure
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: sentinelops
+  namespace: sentinelops
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: sentinelops.local
+    http:
+      paths:
+      - backend:
+          service:
+            name: api
+            port:
+              number: 4000
+        path: /api
+        pathType: Prefix
+      - backend:
+          service:
+            name: api
+            port:
+              number: 4000
+        path: /ws
+        pathType: Prefix
+      - backend:
+          service:
+            name: web
+            port:
+              number: 3000
+        path: /
+        pathType: Prefix

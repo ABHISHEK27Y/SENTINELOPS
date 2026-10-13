@@ -1,7 +1,7 @@
 'use client';
 import { create } from 'zustand';
 
-export interface AuthUser {
+interface AuthUser {
   email: string;
   name: string;
   role: 'VIEWER' | 'ENGINEER' | 'ADMIN';
@@ -10,6 +10,7 @@ export interface AuthUser {
 interface AuthState {
   token: string | null;
   user: AuthUser | null;
+  hydrated: boolean;
   setAuth: (token: string, user: AuthUser) => void;
   logout: () => void;
   hydrate: () => void;
@@ -18,6 +19,7 @@ interface AuthState {
 export const useAuth = create<AuthState>(set => ({
   token: null,
   user: null,
+  hydrated: false,
   setAuth: (token, user) => {
     try {
       localStorage.setItem('so_token', token);
@@ -25,7 +27,7 @@ export const useAuth = create<AuthState>(set => ({
     } catch {
       /* ignore */
     }
-    set({ token, user });
+    set({ token, user, hydrated: true });
   },
   logout: () => {
     try {
@@ -34,7 +36,7 @@ export const useAuth = create<AuthState>(set => ({
     } catch {
       /* ignore */
     }
-    set({ token: null, user: null });
+    set({ token: null, user: null, hydrated: true });
   },
   hydrate: () => {
     try {
@@ -44,6 +46,7 @@ export const useAuth = create<AuthState>(set => ({
     } catch {
       /* ignore */
     }
+    set({ hydrated: true });
   },
 }));
 

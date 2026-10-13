@@ -30,6 +30,7 @@ export function buildOrderService(): ServiceContext {
     let payment: unknown;
     try {
       const res = await fetch(`${PAYMENT_URL}/charge`, {
+        signal: AbortSignal.timeout(5000),
         method: 'POST',
         headers: {
           'content-type': 'application/json',
@@ -51,6 +52,7 @@ export function buildOrderService(): ServiceContext {
     // order, but it does degrade this service's success signal).
     try {
       await fetch(`${NOTIFICATION_URL}/notify`, {
+        signal: AbortSignal.timeout(3000),
         method: 'POST',
         headers: {
           'content-type': 'application/json',

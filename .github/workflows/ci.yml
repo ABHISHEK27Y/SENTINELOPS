@@ -11,6 +11,21 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  infrastructure:
+    name: Validate deployment source
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - name: Terraform initialization and validation
+        working-directory: infrastructure/terraform
+        run: |
+          terraform init -backend=false -input=false
+          terraform validate
+      - name: Render local Kubernetes and Compose
+        run: |
+          kubectl kustomize . > /tmp/sentinelops-local.yaml
+          docker compose config --quiet
   verify:
     name: Verify (Typecheck + Lint + Format + Test)
     runs-on: ubuntu-latest
@@ -21,9 +36,11 @@ jobs:
           node-version: 22
           cache: npm
       - name: Install
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
       - name: Typecheck
         run: npm run typecheck
+      - name: Dashboard production build
+        run: npm run build -w @sentinelops/web
       - name: Lint
         run: npm run lint
       - name: Format check
@@ -37,8 +54,6 @@ jobs:
     name: Build image
     runs-on: ubuntu-latest
     needs: verify
-    # Only build/scan/push on main.
-    if: github.ref == 'refs/heads/main'
     permissions:
       contents: read
       packages: write
@@ -65,6 +80,23 @@ jobs:
           image: sentinelops/app:${{ github.sha }}
           format: spdx-json
           output-file: sbom.spdx.json
+      - name: Start isolated demo stack
+        run: |
+          docker tag sentinelops/app:${{ github.sha }} sentinelops/app:local
+          docker compose up -d --no-build --wait --wait-timeout 240
+      - name: Full incident workflow smoke test
+        run: node scripts/stack-smoke.mjs
+      - name: Stack diagnostics and cleanup
+        if: always()
+        run: |
+          docker compose logs --no-color > stack.log
+          docker compose down
+      - name: Upload stack diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stack-log
+          path: stack.log
       - name: Upload SBOM
         uses: actions/upload-artifact@v4
         with:

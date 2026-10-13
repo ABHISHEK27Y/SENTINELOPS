@@ -1,6 +1,7 @@
 'use client';
-import { useMemo } from 'react';
 import { ReactFlow, Background, Controls, type Node, type Edge } from '@xyflow/react';
+import { useMemo } from 'react';
+
 import '@xyflow/react/dist/style.css';
 import { Shell } from '@/components/Shell';
 import { useApi } from '@/lib/useApi';
