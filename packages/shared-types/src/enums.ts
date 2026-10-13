@@ -19,7 +19,7 @@ export const METRIC_NOISE_FLOORS: Readonly<Record<string, number>> = {
   cpu_usage: 0.1,
   queue_depth: 1,
   request_rate: 2,
-  http_request_duration_ms: 5,
+  http_request_duration_ms: 25,
   db_query_latency_ms: 5,
   redis_latency_ms: 2,
 };

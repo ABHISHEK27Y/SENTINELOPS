@@ -101,8 +101,8 @@ first verification poll. Request rate must lie between baseline / 1.5 and baseli
 * 1.5. Latency/error/resource gauges may improve below baseline, with the same upper
 tolerance. Invalid or negative observations fail. Detection and recovery share
 absolute noise floors for the local demo: CPU 0.10 of its exported fraction,
-queue depth 1, request rate 2 requests/second, HTTP/database latency 5 ms and
-Redis latency 2 ms. They prevent low-baseline
+queue depth 1, request rate 2 requests/second, HTTP latency 25 ms, database
+latency 5 ms and Redis latency 2 ms. They prevent low-baseline
 jitter from generating incidents or blocking recovery while preserving saturation
 and absent-traffic checks. Production workloads require their own calibration.
 

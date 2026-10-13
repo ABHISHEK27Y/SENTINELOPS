@@ -68,3 +68,19 @@ it('ignores one-request rate jitter but detects a sustained traffic surge', () =
   expect(detector.detect(sample(10))).toBeNull();
   expect(detector.detect(sample(10))?.metric).toBe('request_rate');
 });
+
+it('ignores ordinary HTTP latency movement but confirms a sustained large spike', () => {
+  let timestamp = Date.parse('2026-10-13T08:00:00Z');
+  const sample = (value: number) => ({
+    service: 'order-service',
+    metric: 'http_request_duration_ms',
+    value,
+    ts: new Date((timestamp += 5000)).toISOString(),
+  });
+  const detector = new AnomalyDetector();
+  for (let i = 0; i < 12; i++) detector.detect(sample(58));
+  expect(detector.detect(sample(71))).toBeNull();
+  expect(detector.detect(sample(75))).toBeNull();
+  expect(detector.detect(sample(100))).toBeNull();
+  expect(detector.detect(sample(100))?.metric).toBe('http_request_duration_ms');
+});
