@@ -1,12 +1,13 @@
 # SentinelOps phased repair plan
 
-Started 9 October 2026; updated 12 October 2026. Source: PROJECT_REVIEW_2026-10-09.md.
+Started 9 October 2026; updated 13 October 2026. Source: PROJECT_REVIEW_2026-10-09.md.
 Checked items mean implemented and supported by source, test, build or live
 evidence. All six phases meet the agreed local-demo acceptance scope; remaining
 cloud and production scale work is explicitly deferred.
 The later [running-state recheck](STATUS_RECHECK_2026-10-12.md) found ongoing
-default-workload incident noise; alert calibration and audited disposition are
-the next local quality tasks.
+default-workload incident noise. Alert calibration and a longer fault-free
+observation now pass; see the [final check](FINAL_CHECK_2026-10-13.md).
+Historical incidents remain for explicit operator disposition.
 Delivery target: local demo only, as confirmed by the user. Cloud release tasks
 are deferred and do not block this scope. Live local acceptance has passed.
 See REPAIR_PROGRESS_2026-10-12.md for current evidence and architectural tradeoffs.
@@ -73,12 +74,13 @@ See REPAIR_PROGRESS_2026-10-12.md for current evidence and architectural tradeof
 - [x] Added transport, persistence, auth, administration, approval, recovery, evidence-grounding and provisioning regressions.
 - [x] Added full fault-to-postmortem smoke script and CI stack diagnostics/cleanup.
 - [x] Updated README, runtime ADR, roadmap caveats and implemented architecture document.
-- [x] Final coverage gate: 226 tests; 88.23% lines, 86.38% statements, 80.56% functions, 77.11% branches. Thresholds unchanged.
+- [x] Final coverage gate: 230 tests; 88.30% lines, 86.46% statements, 80.62% functions, 77.36% branches. Thresholds unchanged.
 - [x] Execute smoke script on a live stack, including authenticated fault injection, investigation, approval, duplicate rejection, fresh recovery and postmortem.
 - [x] Live outage, worker restart, multi-replica, missing-data and rejection scenarios passed.
 - [x] User explicitly authorized npm advisory submission; affected dependencies upgraded and final audit reports zero vulnerabilities.
 - [x] Live fault-to-postmortem workflow, duplicate approval rejection, isolated SQL rollback/dedupe/outbox/lifecycle race, and isolated backup/restore passed.
 - [x] Full-suite pass, calibrated deployment, Loki application-log query and browser sign-in/navigation acceptance.
+- [x] Post-calibration live smoke test and 8-minute-31-second fault-free observation: 4,080 metric samples, zero anomalies and zero new incidents.
 - Deferred outside local-demo scope: production release acceptance.
 
 ## Decisions
