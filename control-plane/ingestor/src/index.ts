@@ -22,6 +22,8 @@ import {
   type TopicName,
 } from '@sentinelops/shared-types';
 
+import { startRetention } from './retention.js';
+
 const PORT = Number(process.env['INGESTOR_PORT'] ?? 8095);
 const log = createLogger({ service: 'ingestor' });
 const env = getEnv();
@@ -37,6 +39,12 @@ const mMetrics = new Counter({
 const mLogs = new Counter({
   name: 'logs_ingested_total',
   help: 'Log records persisted',
+  registers: [registry],
+});
+const mRetention = new Counter({
+  name: 'retention_deleted_total',
+  help: 'Expired raw telemetry rows deleted',
+  labelNames: ['table'],
   registers: [registry],
 });
 
@@ -116,9 +124,17 @@ async function main(): Promise<void> {
       }),
   });
 
+  const stopRetention = startRetention({
+    metricsHours: env.METRICS_RETENTION_HOURS,
+    logsHours: env.LOGS_RETENTION_HOURS,
+    intervalMs: env.RETENTION_INTERVAL_MS,
+    onDeleted: (table, count) => mRetention.inc({ table }, count),
+    onError: err => log.error({ err }, 'telemetry retention failed'),
+  });
   const shutdown = async (sig: string) => {
     log.info({ sig }, 'shutting down');
     await consumer.stop();
+    await stopRetention();
     await stopOutbox();
     await producer.disconnect();
     await health.close();

@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EventType, Topics, makeEnvelope, type EventEnvelope } from '@sentinelops/shared-types';
 
 type Handler = (event: EventEnvelope, context: { topic: string }) => Promise<unknown>;
+type Registry = { metrics: () => Promise<string> };
 const deps = vi.hoisted(() => ({
   up: vi.fn(),
   query: vi.fn(),
@@ -13,15 +14,21 @@ const deps = vi.hoisted(() => ({
   disconnect: vi.fn(),
   stopConsumer: vi.fn(),
   stopOutbox: vi.fn(),
+  pruneTelemetryBatch: vi.fn().mockResolvedValue(0),
   healthClose: vi.fn(),
   log: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), child: vi.fn() },
   handlers: new Map<string, { topics: string[]; handler: Handler }>(),
   state: new Map<string, unknown>(),
-  health: null as null | { ready: () => Promise<boolean> },
+  health: null as null | { ready: () => Promise<boolean>; registry: Registry },
 }));
 vi.mock('@sentinelops/config', async original => ({
   ...(await original<object>()),
-  getEnv: () => ({ REDIS_URL: 'redis://test' }),
+  getEnv: () => ({
+    REDIS_URL: 'redis://test',
+    METRICS_RETENTION_HOURS: 48,
+    LOGS_RETENTION_HOURS: 72,
+    RETENTION_INTERVAL_MS: 600000,
+  }),
 }));
 vi.mock('@sentinelops/logger', () => ({ createLogger: () => deps.log }));
 vi.mock('@sentinelops/db', () => ({
@@ -35,6 +42,7 @@ vi.mock('@sentinelops/db', () => ({
     deps.state.set(key, next.state);
   },
   startOutbox: () => deps.stopOutbox,
+  pruneTelemetryBatch: deps.pruneTelemetryBatch,
 }));
 vi.mock('@sentinelops/kafka', () => ({
   EventProducer: class {
@@ -53,7 +61,7 @@ vi.mock('@sentinelops/kafka', () => ({
   RedisIdempotencyStore: class {},
 }));
 vi.mock('@sentinelops/service-kit', () => ({
-  startHealthServer: async (options: { ready: () => Promise<boolean> }) => {
+  startHealthServer: async (options: { ready: () => Promise<boolean>; registry: Registry }) => {
     deps.health = options;
     return { close: deps.healthClose };
   },
@@ -102,6 +110,21 @@ async function shutdown() {
   expect(deps.healthClose).toHaveBeenCalledOnce();
 }
 describe('control-plane startup, ingestion and shutdown', () => {
+  it('exposes retention deletion counts and stops pruning before closing the database', async () => {
+    const interval = vi.spyOn(globalThis, 'setInterval');
+    await import('./ingestor/src/index.js');
+    await started('ingestor');
+    const tick = interval.mock.calls.find(call => call[1] === 600000)![0] as () => void;
+    deps.pruneTelemetryBatch.mockResolvedValueOnce(3).mockResolvedValueOnce(2);
+    tick();
+    await vi.waitFor(() => expect(deps.pruneTelemetryBatch).toHaveBeenCalledTimes(2));
+    const metrics = await deps.health!.registry.metrics();
+    expect(metrics).toContain('retention_deleted_total{table="metrics",service="ingestor"} 3');
+    expect(metrics).toContain('retention_deleted_total{table="logs",service="ingestor"} 2');
+    await shutdown();
+    tick();
+    expect(deps.pruneTelemetryBatch).toHaveBeenCalledTimes(2);
+  });
   it('persists normalized metrics/logs and rejects malformed telemetry', async () => {
     await import('./ingestor/src/index.js');
     const consumer = await started('ingestor');

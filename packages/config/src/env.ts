@@ -8,6 +8,9 @@ loadDotenv();
 const EnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   LOG_LEVEL: z.string().default('info'),
+  METRICS_RETENTION_HOURS: z.coerce.number().int().min(1).max(87600).default(48),
+  LOGS_RETENTION_HOURS: z.coerce.number().int().min(1).max(87600).default(72),
+  RETENTION_INTERVAL_MS: z.coerce.number().int().min(1).max(2147483647).default(600000),
 
   DATABASE_URL: z
     .string()

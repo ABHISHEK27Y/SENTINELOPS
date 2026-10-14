@@ -19,6 +19,9 @@ x-app: &app
   environment: &app-env
     NODE_ENV: production
     LOG_LEVEL: info
+    METRICS_RETENTION_HOURS: ${METRICS_RETENTION_HOURS:-48}
+    LOGS_RETENTION_HOURS: ${LOGS_RETENTION_HOURS:-72}
+    RETENTION_INTERVAL_MS: ${RETENTION_INTERVAL_MS:-600000}
     OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
     OTEL_SERVICE_NAMESPACE: sentinelops
     DATABASE_URL: postgresql://sentinel:sentinel_dev_pw@postgres:5432/sentinelops
