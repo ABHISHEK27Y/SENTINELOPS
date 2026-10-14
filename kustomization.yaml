@@ -9,6 +9,7 @@ resources:
   - infrastructure/kubernetes/04-apps.yaml
   - infrastructure/kubernetes/05-web-ingress.yaml
   - infrastructure/kubernetes/06-monitoring.yaml
+  - infrastructure/kubernetes/07-networkpolicies.yaml
 generatorOptions:
   disableNameSuffixHash: true
 configMapGenerator:

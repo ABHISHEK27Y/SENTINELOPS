@@ -26,8 +26,18 @@ spec:
   template:
     metadata: { labels: { app: postgres } }
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+        seccompProfile: { type: RuntimeDefault }
       containers:
         - name: postgres
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
           image: pgvector/pgvector:pg16
           envFrom:
             - secretRef: { name: sentinelops-secrets }
@@ -39,8 +49,12 @@ spec:
             initialDelaySeconds: 5
             periodSeconds: 5
           volumeMounts:
+            - { name: tmp, mountPath: /tmp }
             - { name: pgdata, mountPath: /var/lib/postgresql/data }
+            - { name: postgres-run, mountPath: /var/run/postgresql }
       volumes:
+        - { name: tmp, emptyDir: {} }
+        - { name: postgres-run, emptyDir: {} }
         - name: pgdata
           persistentVolumeClaim: { claimName: postgres-data }
 ---
@@ -63,18 +77,30 @@ spec:
   template:
     metadata: { labels: { app: redis } }
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+        seccompProfile: { type: RuntimeDefault }
       containers:
         - name: redis
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
           image: redis:7-alpine
           args: ['redis-server', '--appendonly', 'yes']
           ports: [{ containerPort: 6379 }]
           volumeMounts:
+            - { name: tmp, mountPath: /tmp }
             - { name: redisdata, mountPath: /data }
           readinessProbe:
             exec: { command: ['redis-cli', 'ping'] }
             initialDelaySeconds: 3
             periodSeconds: 5
       volumes:
+        - { name: tmp, emptyDir: {} }
         - name: redisdata
           persistentVolumeClaim: { claimName: redis-data }
 ---

@@ -11,13 +11,29 @@ metadata: { name: migrate, namespace: sentinelops }
 spec:
   backoffLimit: 5
   template:
+    metadata: { labels: { app: migrate } }
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+        seccompProfile: { type: RuntimeDefault }
       restartPolicy: OnFailure
+      volumes:
+        - { name: tmp, emptyDir: {} }
       containers:
         - name: migrate
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
           image: sentinelops/app:local
           imagePullPolicy: IfNotPresent
           command: ['npm', 'run', 'db:migrate']
+          env: [{ name: NPM_CONFIG_CACHE, value: /tmp/npm }]
           envFrom:
             - configMapRef: { name: sentinelops-config }
             - secretRef: { name: sentinelops-secrets }
@@ -39,8 +55,22 @@ spec:
   template:
     metadata: { labels: { app: payment-service } }
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+        seccompProfile: { type: RuntimeDefault }
+      volumes:
+        - { name: tmp, emptyDir: {} }
       containers:
         - name: payment-service
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
           image: sentinelops/app:local
           imagePullPolicy: IfNotPresent
           command: ['npm', 'run', 'start', '-w', '@sentinelops/payment-service']
@@ -49,7 +79,11 @@ spec:
               { configMapRef: { name: sentinelops-config } },
               { secretRef: { name: sentinelops-secrets } },
             ]
-          env: [{ name: PAYMENT_SERVICE_PORT, value: '8083' }]
+          env:
+            [
+              { name: NPM_CONFIG_CACHE, value: /tmp/npm },
+              { name: PAYMENT_SERVICE_PORT, value: '8083' },
+            ]
           ports: [{ containerPort: 8083 }]
           readinessProbe:
             {
@@ -85,8 +119,22 @@ spec:
   template:
     metadata: { labels: { app: notification-service } }
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+        seccompProfile: { type: RuntimeDefault }
+      volumes:
+        - { name: tmp, emptyDir: {} }
       containers:
         - name: notification-service
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
           image: sentinelops/app:local
           imagePullPolicy: IfNotPresent
           command: ['npm', 'run', 'start', '-w', '@sentinelops/notification-service']
@@ -95,7 +143,11 @@ spec:
               { configMapRef: { name: sentinelops-config } },
               { secretRef: { name: sentinelops-secrets } },
             ]
-          env: [{ name: NOTIFICATION_SERVICE_PORT, value: '8084' }]
+          env:
+            [
+              { name: NPM_CONFIG_CACHE, value: /tmp/npm },
+              { name: NOTIFICATION_SERVICE_PORT, value: '8084' },
+            ]
           ports: [{ containerPort: 8084 }]
           readinessProbe:
             {
@@ -131,8 +183,22 @@ spec:
   template:
     metadata: { labels: { app: user-service } }
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+        seccompProfile: { type: RuntimeDefault }
+      volumes:
+        - { name: tmp, emptyDir: {} }
       containers:
         - name: user-service
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
           image: sentinelops/app:local
           imagePullPolicy: IfNotPresent
           command: ['npm', 'run', 'start', '-w', '@sentinelops/user-service']
@@ -141,7 +207,11 @@ spec:
               { configMapRef: { name: sentinelops-config } },
               { secretRef: { name: sentinelops-secrets } },
             ]
-          env: [{ name: USER_SERVICE_PORT, value: '8081' }]
+          env:
+            [
+              { name: NPM_CONFIG_CACHE, value: /tmp/npm },
+              { name: USER_SERVICE_PORT, value: '8081' },
+            ]
           ports: [{ containerPort: 8081 }]
           readinessProbe:
             {
@@ -177,8 +247,22 @@ spec:
   template:
     metadata: { labels: { app: order-service } }
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+        seccompProfile: { type: RuntimeDefault }
+      volumes:
+        - { name: tmp, emptyDir: {} }
       containers:
         - name: order-service
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
           image: sentinelops/app:local
           imagePullPolicy: IfNotPresent
           command: ['npm', 'run', 'start', '-w', '@sentinelops/order-service']
@@ -188,6 +272,7 @@ spec:
               { secretRef: { name: sentinelops-secrets } },
             ]
           env:
+            - { name: NPM_CONFIG_CACHE, value: /tmp/npm }
             - { name: ORDER_SERVICE_PORT, value: '8082' }
             - { name: PAYMENT_SERVICE_URL, value: 'http://payment-service:8083' }
             - { name: NOTIFICATION_SERVICE_URL, value: 'http://notification-service:8084' }
@@ -226,8 +311,22 @@ spec:
   template:
     metadata: { labels: { app: api-gateway } }
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+        seccompProfile: { type: RuntimeDefault }
+      volumes:
+        - { name: tmp, emptyDir: {} }
       containers:
         - name: api-gateway
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
           image: sentinelops/app:local
           imagePullPolicy: IfNotPresent
           command: ['npm', 'run', 'start', '-w', '@sentinelops/api-gateway']
@@ -237,6 +336,7 @@ spec:
               { secretRef: { name: sentinelops-secrets } },
             ]
           env:
+            - { name: NPM_CONFIG_CACHE, value: /tmp/npm }
             - { name: API_GATEWAY_PORT, value: '8080' }
             - { name: USER_SERVICE_URL, value: 'http://user-service:8081' }
             - { name: ORDER_SERVICE_URL, value: 'http://order-service:8082' }
@@ -276,8 +376,22 @@ spec:
   template:
     metadata: { labels: { app: anomaly-engine } }
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+        seccompProfile: { type: RuntimeDefault }
+      volumes:
+        - { name: tmp, emptyDir: {} }
       containers:
         - name: anomaly-engine
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
           image: sentinelops/app:local
           imagePullPolicy: IfNotPresent
           command: ['npm', 'run', 'start', '-w', '@sentinelops/anomaly-engine']
@@ -286,7 +400,11 @@ spec:
               { configMapRef: { name: sentinelops-config } },
               { secretRef: { name: sentinelops-secrets } },
             ]
-          env: [{ name: ANOMALY_ENGINE_PORT, value: '8091' }]
+          env:
+            [
+              { name: NPM_CONFIG_CACHE, value: /tmp/npm },
+              { name: ANOMALY_ENGINE_PORT, value: '8091' },
+            ]
           ports: [{ containerPort: 8091 }]
           readinessProbe:
             {
@@ -316,8 +434,22 @@ spec:
   template:
     metadata: { labels: { app: incident-engine } }
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+        seccompProfile: { type: RuntimeDefault }
+      volumes:
+        - { name: tmp, emptyDir: {} }
       containers:
         - name: incident-engine
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
           image: sentinelops/app:local
           imagePullPolicy: IfNotPresent
           command: ['npm', 'run', 'start', '-w', '@sentinelops/incident-engine']
@@ -326,7 +458,11 @@ spec:
               { configMapRef: { name: sentinelops-config } },
               { secretRef: { name: sentinelops-secrets } },
             ]
-          env: [{ name: INCIDENT_ENGINE_PORT, value: '8090' }]
+          env:
+            [
+              { name: NPM_CONFIG_CACHE, value: /tmp/npm },
+              { name: INCIDENT_ENGINE_PORT, value: '8090' },
+            ]
           ports: [{ containerPort: 8090 }]
           readinessProbe:
             {
@@ -356,8 +492,22 @@ spec:
   template:
     metadata: { labels: { app: ingestor } }
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+        seccompProfile: { type: RuntimeDefault }
+      volumes:
+        - { name: tmp, emptyDir: {} }
       containers:
         - name: ingestor
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
           image: sentinelops/app:local
           imagePullPolicy: IfNotPresent
           command: ['npm', 'run', 'start', '-w', '@sentinelops/ingestor']
@@ -366,7 +516,7 @@ spec:
               { configMapRef: { name: sentinelops-config } },
               { secretRef: { name: sentinelops-secrets } },
             ]
-          env: [{ name: INGESTOR_PORT, value: '8095' }]
+          env: [{ name: NPM_CONFIG_CACHE, value: /tmp/npm }, { name: INGESTOR_PORT, value: '8095' }]
           ports: [{ containerPort: 8095 }]
           readinessProbe:
             {
@@ -397,8 +547,22 @@ spec:
   template:
     metadata: { labels: { app: api } }
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+        seccompProfile: { type: RuntimeDefault }
+      volumes:
+        - { name: tmp, emptyDir: {} }
       containers:
         - name: api
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
           image: sentinelops/app:local
           imagePullPolicy: IfNotPresent
           command: ['npm', 'run', 'start', '-w', '@sentinelops/api']
@@ -407,8 +571,8 @@ spec:
               { configMapRef: { name: sentinelops-config } },
               { secretRef: { name: sentinelops-secrets } },
             ]
-          env: [{ name: API_PORT, value: '4000' }]
-          ports: [{ containerPort: 4000 }]
+          env: [{ name: NPM_CONFIG_CACHE, value: /tmp/npm }, { name: API_PORT, value: '4000' }]
+          ports: [{ containerPort: 4000 }, { containerPort: 4001 }]
           readinessProbe:
             {
               httpGet: { path: /api/ready, port: 4000 },
@@ -426,4 +590,12 @@ spec:
 apiVersion: v1
 kind: Service
 metadata: { name: api, namespace: sentinelops }
-spec: { selector: { app: api }, ports: [{ port: 4000, targetPort: 4000 }] }
+spec:
+  {
+    selector: { app: api },
+    ports:
+      [
+        { name: http, port: 4000, targetPort: 4000 },
+        { name: metrics, port: 4001, targetPort: 4001 },
+      ],
+  }

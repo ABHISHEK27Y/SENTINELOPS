@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const deps = vi.hoisted(() => ({
   app: null as FastifyInstance | null,
+  metricsApp: null as FastifyInstance | null,
   up: vi.fn(),
   query: vi.fn(),
   closePool: vi.fn(),
@@ -32,7 +33,8 @@ vi.mock('fastify', async original => {
     ...actual,
     default: (options: FastifyServerOptions) => {
       const app: FastifyInstance = actual.default(options);
-      deps.app = app;
+      if (!deps.app) deps.app = app;
+      else deps.metricsApp = app;
       vi.spyOn(app, 'listen').mockImplementation(
         (async () => 'http://localhost:4000') as typeof app.listen
       );
@@ -75,6 +77,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   signals.clear();
   deps.app = null;
+  deps.metricsApp = null;
   deps.fanout = null;
   deps.log.child.mockReturnValue(deps.log);
   deps.env.DEMO_MODE = true;
@@ -97,6 +100,7 @@ beforeEach(() => {
 });
 afterEach(async () => {
   await deps.app?.close();
+  await deps.metricsApp?.close();
   vi.restoreAllMocks();
   vi.unstubAllEnvs();
 });
@@ -111,7 +115,12 @@ describe('platform API startup and shutdown', () => {
       llm: 'mock',
     });
     expect((await app.inject('/api/ready')).statusCode).toBe(200);
-    expect((await app.inject('/metrics')).body).toContain('api_requests_total');
+    expect((await app.inject('/metrics')).statusCode).toBe(404);
+    expect((await deps.metricsApp!.inject('/metrics')).body).toContain('api_requests_total');
+    expect((await deps.metricsApp!.inject('/api/incidents')).statusCode).toBe(404);
+    expect((await deps.metricsApp!.inject('/ws')).statusCode).toBe(404);
+    expect(deps.metricsApp!.listen).toHaveBeenCalledWith({ port: 4001, host: '0.0.0.0' });
+    const closeMetrics = vi.spyOn(deps.metricsApp!, 'close');
     expect((await app.inject('/api/incidents')).statusCode).toBe(401);
     deps.query.mockRejectedValueOnce(new Error('database down'));
     expect((await app.inject('/api/ready')).statusCode).toBe(503);
@@ -131,6 +140,7 @@ describe('platform API startup and shutdown', () => {
     expect(deps.stopOutbox).toHaveBeenCalledOnce();
     expect(deps.stopConsumer).toHaveBeenCalledOnce();
     expect(deps.disconnect).toHaveBeenCalledOnce();
+    expect(closeMetrics).toHaveBeenCalledOnce();
     expect(deps.stopWorker.mock.invocationCallOrder[0]).toBeLessThan(
       deps.disconnect.mock.invocationCallOrder[0]!
     );

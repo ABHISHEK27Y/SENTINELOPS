@@ -23,6 +23,6 @@ WORKDIR /app
 COPY --from=builder --chown=nodejs:nodejs /app ./
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1
 USER nodejs
-EXPOSE 8080 8081 8082 8083 8084 8090 8091 8095 4000 3000
+EXPOSE 8080 8081 8082 8083 8084 8090 8091 8095 4000 4001 3000
 ENTRYPOINT ["dumb-init", "--"]
 CMD ["node", "--version"]

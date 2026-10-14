@@ -93,7 +93,9 @@ async function main(): Promise<void> {
     requests.inc({ route, status: String(reply.statusCode) });
     latency.observe({ route }, (performance.now() - (starts.get(req) ?? performance.now())) / 1000);
   });
-  app.get('/metrics', async (_req, reply) =>
+  // A separate listener lets NetworkPolicy expose metrics without exposing the API.
+  const metricsApp = Fastify({ logger: false });
+  metricsApp.get('/metrics', async (_req, reply) =>
     reply.header('Content-Type', registry.contentType).send(await registry.metrics())
   );
   app.get('/api/ready', async (_req, reply) => {
@@ -137,6 +139,7 @@ async function main(): Promise<void> {
     .catch(err => log.warn({ err: (err as Error).message }, 'ws consumer not started'));
 
   await app.listen({ port: PORT, host: '0.0.0.0' });
+  await metricsApp.listen({ port: 4001, host: '0.0.0.0' });
   log.info({ port: PORT }, 'platform api listening');
 
   const shutdown = async (sig: string) => {
@@ -146,6 +149,7 @@ async function main(): Promise<void> {
     await stopOutbox();
     await producer.disconnect();
     await app.close();
+    await metricsApp.close();
     await closePool();
     process.exit(0);
   };
