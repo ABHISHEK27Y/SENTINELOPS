@@ -12,7 +12,7 @@ import {
   FaultType,
 } from '@sentinelops/shared-types';
 
-import { authenticate, requireRole, type JwtUser } from '../auth.js';
+import { requireRole, type JwtUser } from '../auth.js';
 import { serviceBaseUrl, SERVICES, canInjectFault } from '../topology.js';
 
 const reasonSchema = {
@@ -219,13 +219,28 @@ export function registerRemediationRoutes(app: FastifyInstance): void {
       }
     );
   }
-  app.get(
+  app.get<{ Querystring: { limit?: number; before?: string } }>(
     '/api/audit',
-    { preHandler: [authenticate] },
-    async () =>
+    {
+      preHandler: [requireRole(Role.ADMIN)],
+      schema: {
+        querystring: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            limit: { type: 'integer', minimum: 1, maximum: 200, default: 50 },
+            before: { type: 'string', format: 'date-time' },
+          },
+        },
+      },
+    },
+    async req =>
       (
         await query(
-          'SELECT actor,action,target,result,data,at FROM audit_log ORDER BY at DESC LIMIT 100'
+          `SELECT actor,action,target,result,data,at FROM audit_log
+           WHERE ($1::timestamptz IS NULL OR at < $1::timestamptz)
+           ORDER BY at DESC, id DESC LIMIT $2`,
+          [req.query.before ?? null, req.query.limit ?? 50]
         )
       ).rows
   );

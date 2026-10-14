@@ -209,3 +209,62 @@ describe('approval orchestration', () => {
     expect(db.query).not.toHaveBeenCalled();
   });
 });
+
+describe('admin audit history', () => {
+  it('rejects missing authentication and non-admin roles before reading storage', async () => {
+    const { app } = await harness();
+    expect((await app.inject('/api/audit')).statusCode).toBe(401);
+    for (const role of ['VIEWER', 'ENGINEER']) {
+      const token = app.jwt.sign({ sub: 'user-a', email: 'user@example.test', role });
+      expect(
+        (await app.inject({ url: '/api/audit', headers: { authorization: `Bearer ${token}` } }))
+          .statusCode
+      ).toBe(403);
+    }
+    expect(db.query).not.toHaveBeenCalled();
+  });
+  it('returns admin results with a default page of 50 and a parameterized timestamp cursor', async () => {
+    const { app, token } = await harness('ADMIN');
+    const headers = { authorization: `Bearer ${token}` };
+    const rows = [{ actor: 'admin@example.test', action: 'approve', at: '2026-10-13T00:00:00Z' }];
+    db.query.mockResolvedValue({ rows });
+    const result = await app.inject({ url: '/api/audit', headers });
+    expect(result.statusCode).toBe(200);
+    expect(result.json()).toEqual(rows);
+    expect(db.query).toHaveBeenLastCalledWith(expect.stringContaining('at < $1::timestamptz'), [
+      null,
+      50,
+    ]);
+    for (const limit of [1, 200]) {
+      const before = '2026-10-14T00:00:00Z';
+      expect(
+        (await app.inject({ url: `/api/audit?limit=${limit}&before=${before}`, headers }))
+          .statusCode
+      ).toBe(200);
+      expect(db.query).toHaveBeenLastCalledWith(expect.stringContaining('LIMIT $2'), [
+        before,
+        limit,
+      ]);
+    }
+  });
+  it.each([
+    'limit=0',
+    'limit=-1',
+    'limit=201',
+    'limit=1.5',
+    'limit=no',
+    'before=yesterday',
+    'before=2026-10-14',
+  ])('rejects invalid query %s without querying audit data', async query => {
+    const { app, token } = await harness('ADMIN');
+    expect(
+      (
+        await app.inject({
+          url: `/api/audit?${query}`,
+          headers: { authorization: `Bearer ${token}` },
+        })
+      ).statusCode
+    ).toBe(400);
+    expect(db.query).not.toHaveBeenCalled();
+  });
+});
