@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { Anomaly } from '@sentinelops/shared-types';
+import { RootCauseHypothesisSchema, type Anomaly } from '@sentinelops/shared-types';
 
 import { rankRootCauses, type DirectedEdge } from './engine.js';
 
@@ -27,6 +27,18 @@ function a(service: string, metric: string, tsMs: number, score = 0.8): Anomaly 
 }
 
 describe('rankRootCauses', () => {
+  it('parses historical hypotheses with a backward-compatible service default', () => {
+    const old = {
+      title: 'Legacy diagnosis',
+      description: 'Evidence',
+      confidence: 0.8,
+      evidence: [],
+    };
+    expect(RootCauseHypothesisSchema.parse(old).service).toBe('unknown');
+    expect(RootCauseHypothesisSchema.parse({ ...old, service: 'order-service' }).service).toBe(
+      'order-service'
+    );
+  });
   it('identifies the deepest dependency that failed first as root cause', () => {
     const t0 = 1_000_000;
     const hyps = rankRootCauses({
@@ -42,6 +54,7 @@ describe('rankRootCauses', () => {
 
     expect(hyps.length).toBeGreaterThan(0);
     expect(hyps[0]!.title).toContain('postgres');
+    expect(hyps[0]!.service).toBe('postgres');
     expect(hyps[0]!.confidence).toBeGreaterThan(hyps[1]!.confidence);
     // postgres has 2 dependents (payment, order) in the incident.
     const depEvidence = hyps[0]!.evidence.find(e => e.kind === 'dependency');
@@ -62,7 +75,7 @@ describe('rankRootCauses', () => {
       ],
       incidentStartMs: t0,
     });
-    const payment = withDeploy.find(h => h.title.includes('payment-service'))!;
+    const payment = withDeploy.find(h => h.service === 'payment-service')!;
     expect(payment.evidence.some(e => e.kind === 'deployment')).toBe(true);
   });
 

@@ -32,6 +32,7 @@ export const EvidenceSchema = z.object({
 export type Evidence = z.infer<typeof EvidenceSchema>;
 
 export const RootCauseHypothesisSchema = z.object({
+  service: z.string().default('unknown'),
   title: z.string(),
   description: z.string(),
   confidence: z.number().min(0).max(1),

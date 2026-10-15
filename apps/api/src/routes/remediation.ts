@@ -13,7 +13,7 @@ import {
 } from '@sentinelops/shared-types';
 
 import { requireRole, type JwtUser } from '../auth.js';
-import { serviceBaseUrl, SERVICES, canInjectFault } from '../topology.js';
+import { serviceBaseUrl, canInjectFault } from '../topology.js';
 
 const reasonSchema = {
   body: {
@@ -31,7 +31,7 @@ export function registerRemediationRoutes(app: FastifyInstance): void {
         await query<{
           status: IncidentStatus;
           affected_services: string[];
-          root_cause: { title?: string } | null;
+          root_cause: { service?: string; title?: string } | null;
         }>('SELECT status,affected_services,root_cause FROM incidents WHERE id=$1', [req.params.id])
       ).rows[0];
       if (!inc) return reply.code(404).send({ error: 'unknown incident' });
@@ -43,10 +43,7 @@ export function registerRemediationRoutes(app: FastifyInstance): void {
           [req.params.id]
         )
       ).rows.map(r => r.metric);
-      const service =
-        SERVICES.find(s => inc.root_cause?.title?.includes(s.id))?.id ??
-        inc.affected_services[0] ??
-        'unknown';
+      const service = inc.root_cause?.service ?? inc.affected_services[0] ?? 'unknown';
       let actions: ProposedAction[] = recommendActions({
         rootCauseService: service,
         affectedServices: inc.affected_services,

@@ -141,6 +141,7 @@ export function rankRootCauses(input: RootCauseInput): RootCauseHypothesis[] {
         });
       }
       return {
+        service: s.service,
         title: `${s.service} is the probable root cause`,
         description:
           `${s.service} is the most likely origin: ${s.dependents} affected ` +

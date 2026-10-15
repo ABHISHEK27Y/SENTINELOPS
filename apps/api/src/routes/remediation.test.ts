@@ -49,6 +49,39 @@ beforeEach(() => {
 });
 
 describe('scoped remediation proposals', () => {
+  it.each([
+    ['order-service', 'order-service'],
+    [undefined, 'payment-service'],
+    ['unknown', 'unknown'],
+  ])(
+    'targets structured service %s without parsing diagnostic titles',
+    async (service, expected) => {
+      db.query.mockImplementation(async (sql: string) => ({
+        rows: sql.startsWith('SELECT status,affected_services')
+          ? [
+              {
+                status: 'IDENTIFIED',
+                affected_services: ['payment-service'],
+                root_cause: {
+                  ...(service === undefined ? {} : { service }),
+                  title: 'user-service symptom',
+                },
+              },
+            ]
+          : sql.startsWith('SELECT status')
+            ? [{ status: 'IDENTIFIED' }]
+            : sql.startsWith('SELECT DISTINCT metric')
+              ? [{ metric: 'request_latency_ms' }]
+              : sql.includes('INSERT INTO remediation_actions')
+                ? [{ id: 'action-a' }]
+                : [],
+      }));
+      const { app, token } = await harness();
+      const response = await propose(app, token);
+      expect(response.statusCode).toBe(200);
+      expect(response.json().actions[0].targetService).toBe(expected);
+    }
+  );
   function proposalState(
     options: { missing?: boolean; status?: string; lockedStatus?: string; existing?: object[] } = {}
   ) {

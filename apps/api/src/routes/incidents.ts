@@ -12,7 +12,6 @@ import { recommendActions } from '@sentinelops/remediation';
 import { Role, type IncidentStatus } from '@sentinelops/shared-types';
 
 import { authenticate, requireRole } from '../auth.js';
-import { SERVICES } from '../topology.js';
 
 function currentIncidentTitle<T extends { title: string; affected_services: string[] }>(row: T): T {
   const count = row.affected_services.length;
@@ -51,14 +50,6 @@ async function loadIncident(id: string) {
 
 async function setStatus(id: string, from: string, to: string): Promise<void> {
   await transitionIncident(id, to as IncidentStatus, 'status changed', from as IncidentStatus);
-}
-
-function rootCauseService(title: string | undefined, affected: string[]): string {
-  if (title) {
-    const hit = SERVICES.find(s => title.includes(s.id));
-    if (hit) return hit.id;
-  }
-  return affected[0] ?? 'unknown';
 }
 
 export function registerIncidentRoutes(
@@ -137,11 +128,12 @@ export function registerIncidentRoutes(
       ).rows;
 
       const rc = (incident.root_cause ?? null) as {
+        service?: string;
         title?: string;
         confidence?: number;
         evidence?: Array<{ summary: string }>;
       } | null;
-      const rcService = rootCauseService(rc?.title, incident.affected_services);
+      const rcService = rc?.service ?? incident.affected_services[0] ?? 'unknown';
       const metrics = [...new Set(anomalyRows.map(a => a.metric))];
 
       const deployments = (

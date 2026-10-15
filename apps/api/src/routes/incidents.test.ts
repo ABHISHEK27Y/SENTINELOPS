@@ -26,6 +26,7 @@ const incident = {
   severity: 'HIGH',
   affected_services: ['payment-service'],
   root_cause: {
+    service: undefined as string | undefined,
     title: 'payment-service degraded',
     confidence: 0.8,
     evidence: [{ summary: 'latency spike' }],
@@ -38,6 +39,8 @@ const incident = {
 beforeEach(() => {
   vi.clearAllMocks();
   incident.title = 'Payment latency';
+  incident.root_cause.service = undefined;
+  incident.root_cause.title = 'payment-service degraded';
   incident.affected_services = ['payment-service'];
   db.status = 'DETECTED';
   db.lockedStatus = '';
@@ -108,6 +111,20 @@ async function harness(role = 'ENGINEER') {
   };
 }
 describe('incident investigation and postmortem API', () => {
+  it.each([
+    ['order-service', 'order-service'],
+    [undefined, 'payment-service'],
+    ['unknown', 'unknown'],
+  ])('uses structured service %s and only falls back for old rows', async (service, expected) => {
+    incident.root_cause.service = service;
+    incident.root_cause.title = 'user-service reports errors caused by a dependency';
+    const { app, headers } = await harness();
+    expect(
+      (await app.inject({ method: 'POST', url: '/api/incidents/INC-1/investigate', headers }))
+        .statusCode
+    ).toBe(200);
+    expect(retrieved).toHaveBeenCalledWith(expect.stringMatching(new RegExp(` ${expected}$`)), 3);
+  });
   it('shows the current affected-service count for older stored incidents', async () => {
     incident.title = 'Degradation on payment-service (1 service affected)';
     incident.affected_services = ['payment-service', 'order-service', 'api-gateway'];
