@@ -192,7 +192,7 @@ describe('control-plane startup, ingestion and shutdown', () => {
           type: EventType.METRIC_SAMPLE,
           service: 'payment-service',
           payload: {
-            samples: metrics.map(metric => ({
+            samples: [...metrics, 'request_rate'].map(metric => ({
               metric,
               value: metric === 'error_rate' ? 0.01 : 10,
               ts: new Date(start + i * 1000).toISOString(),
@@ -203,6 +203,19 @@ describe('control-plane startup, ingestion and shutdown', () => {
         { topic: Topics.metrics }
       );
     expect(deps.enqueueEvent).not.toHaveBeenCalled();
+    // This separate batch is persisted even though it emits no anomaly.
+    await consumer.handler(
+      makeEnvelope({
+        type: EventType.METRIC_SAMPLE,
+        service: 'payment-service',
+        payload: {
+          samples: [
+            { metric: 'request_rate', value: 321, ts: new Date(start + 40000).toISOString() },
+          ],
+        },
+      }),
+      { topic: Topics.metrics }
+    );
     for (let i = 0; i < 3; i++)
       await consumer.handler(
         makeEnvelope({
@@ -224,6 +237,9 @@ describe('control-plane startup, ingestion and shutdown', () => {
         { topic: Topics.metrics }
       );
     expect(deps.enqueueEvent).toHaveBeenCalledTimes(5);
+    expect(
+      deps.enqueueEvent.mock.calls.every(call => call[1].payload.requestRate?.value === 321)
+    ).toBe(true);
     const types = deps.enqueueEvent.mock.calls.map(call => call[1].type);
     for (const type of [
       EventType.LATENCY_ANOMALY,

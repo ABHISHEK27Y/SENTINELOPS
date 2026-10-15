@@ -1,4 +1,4 @@
-import type { Anomaly } from '@sentinelops/shared-types';
+import type { Anomaly, RequestRate } from '@sentinelops/shared-types';
 
 import { DependencyGraph } from './graph.js';
 
@@ -13,6 +13,8 @@ export interface CorrelationGroup {
   correlationId: string;
   services: Set<string>;
   anomalies: Anomaly[];
+  /** Latest per-service rates survive anomaly truncation and process restarts. */
+  requestRates?: Record<string, RequestRate>;
   firstSeen: number;
   lastSeen: number;
 }
@@ -66,6 +68,7 @@ export class Correlator {
       match.anomalies.push(anomaly);
       if (match.anomalies.length > 500) match.anomalies.splice(0, match.anomalies.length - 500);
       match.lastSeen = Math.max(match.lastSeen, nowMs);
+      this.recordRequestRate(match, anomaly);
       return {
         correlationId: match.correlationId,
         isNew: false,
@@ -82,12 +85,21 @@ export class Correlator {
       lastSeen: nowMs,
     };
     this.groups.set(group.correlationId, group);
+    this.recordRequestRate(group, anomaly);
     return {
       correlationId: group.correlationId,
       isNew: true,
       services: [...group.services],
       anomalyCount: 1,
     };
+  }
+
+  private recordRequestRate(group: CorrelationGroup, anomaly: Anomaly): void {
+    const rate = anomaly.requestRate;
+    if (!rate) return;
+    const rates = (group.requestRates ??= {});
+    const previous = rates[anomaly.service];
+    if (!previous || Date.parse(rate.ts) >= Date.parse(previous.ts)) rates[anomaly.service] = rate;
   }
 
   private findGroup(anomaly: Anomaly, nowMs: number): CorrelationGroup | undefined {

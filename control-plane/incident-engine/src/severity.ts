@@ -27,13 +27,17 @@ export function severityForGroup(group: CorrelationGroup): {
   }
 
   const durationSeconds = Math.max(0, (group.lastSeen - group.firstSeen) / 1000);
+  const rates = [...group.services]
+    .map(service => group.requestRates?.[service]?.value)
+    .filter(
+      (rate): rate is number => typeof rate === 'number' && Number.isFinite(rate) && rate >= 0
+    );
   const signals: SeveritySignals = {
     errorRate,
     latencyRatio,
     affectedServices: group.services.size,
-    // Request volume isn't in the anomaly payload; use anomaly count as a proxy
-    // for blast intensity until the ingestor supplies true rate (Phase 5).
-    requestVolume: Math.min(500, group.anomalies.length * 40),
+    // Preserve the legacy proxy only when no affected service has a measured rate.
+    requestVolume: rates.length ? Math.max(...rates) : Math.min(500, group.anomalies.length * 40),
     durationSeconds,
   };
 

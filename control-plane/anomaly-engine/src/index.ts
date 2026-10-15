@@ -30,6 +30,8 @@ import {
   type TopicName,
 } from '@sentinelops/shared-types';
 
+import { latestRequestRate } from './request-rate.js';
+
 const PORT = Number(process.env['ANOMALY_ENGINE_PORT'] ?? 8091);
 const log = createLogger({ service: 'anomaly-engine' });
 const env = getEnv();
@@ -120,12 +122,17 @@ async function main(): Promise<void> {
           const detector = new AnomalyDetector();
           detector.restore(state);
           const samples = extractSamples(envelope.service, envelope.payload);
+          const requestRate = latestRequestRate(
+            samples,
+            (state as { requestRate?: unknown } | null)?.requestRate
+          );
           for (const sample of samples) {
             const started = performance.now();
             const anomaly: Anomaly | null = detector.detect(sample);
             mLatency.observe(performance.now() - started);
             mSamples.inc();
             if (!anomaly) continue;
+            if (requestRate) anomaly.requestRate = requestRate;
             mAnomalies.inc({ service: anomaly.service, severity: anomaly.severity });
             log.warn(
               {
@@ -148,7 +155,10 @@ async function main(): Promise<void> {
               } as { type: string; service: string; traceId?: string; payload: unknown })
             );
           }
-          return { state: detector.snapshot(), result: undefined };
+          return {
+            state: { ...detector.snapshot(), ...(requestRate ? { requestRate } : {}) },
+            result: undefined,
+          };
         });
       }),
   });

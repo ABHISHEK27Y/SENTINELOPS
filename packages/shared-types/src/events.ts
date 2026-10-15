@@ -41,7 +41,15 @@ export const LogRecordSchema = z.object({
 });
 export type LogRecord = z.infer<typeof LogRecordSchema>;
 
+export const RequestRateSchema = z.object({
+  value: z.number().finite().nonnegative(),
+  ts: z.string().datetime(),
+});
+export type RequestRate = z.infer<typeof RequestRateSchema>;
+
 export const AnomalySchema = z.object({
+  /** Latest observed requests/sec for this service; absent on historical events. */
+  requestRate: RequestRateSchema.optional(),
   instance: z.string().optional(),
   anomalyId: z.string().uuid(),
   service: z.string(),

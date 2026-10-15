@@ -48,6 +48,33 @@ describe('DependencyGraph.related', () => {
 });
 
 describe('Correlator', () => {
+  it('retains latest per-service rates across delayed events, trimming and snapshot restore', () => {
+    const c = new Correlator(graph);
+    const first = c.ingest({
+      ...anomaly('payment-service', 'latency', 100000),
+      requestRate: { value: 120, ts: new Date(100000).toISOString() },
+    });
+    c.ingest({
+      ...anomaly('payment-service', 'errors', 101000),
+      requestRate: { value: 10, ts: new Date(99000).toISOString() },
+    });
+    c.ingest({
+      ...anomaly('order-service', 'errors', 102000),
+      requestRate: { value: 240, ts: new Date(102000).toISOString() },
+    });
+    for (let i = 0; i < 501; i++) c.ingest(anomaly('payment-service', 'latency', 103000 + i));
+    const restored = new Correlator(graph);
+    restored.restore(c.snapshot());
+    expect(restored.get(first.correlationId)?.requestRates).toEqual({
+      'payment-service': { value: 120, ts: new Date(100000).toISOString() },
+      'order-service': { value: 240, ts: new Date(102000).toISOString() },
+    });
+    restored.ingest({
+      ...anomaly('payment-service', 'errors', 104000),
+      requestRate: { value: 0, ts: new Date(104000).toISOString() },
+    });
+    expect(restored.get(first.correlationId)?.requestRates?.['payment-service']?.value).toBe(0);
+  });
   it('restores identity, bounds evidence and starts a fresh group after closure', () => {
     let n = 0;
     const options = { idGen: () => `corr-${++n}` };
